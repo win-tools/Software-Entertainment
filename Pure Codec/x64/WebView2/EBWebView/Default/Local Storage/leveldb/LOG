@@ -1,3 +1,2 @@
-2026/01/26-22:13:16.176 4880 Reusing MANIFEST D:\Application\WTools\Entertainment\Pure Codec\x64\WebView2\EBWebView\Default\Local Storage\leveldb/MANIFEST-000001
-2026/01/26-22:13:16.184 4880 Recovering log #3
-2026/01/26-22:13:16.186 4880 Reusing old log D:\Application\WTools\Entertainment\Pure Codec\x64\WebView2\EBWebView\Default\Local Storage\leveldb/000003.log 
+2026/09/22-21:44:02.431 9334 Creating DB D:\application\WTools\Entertainment\Pure Codec\x64\WebView2\EBWebView\Default\Local Storage\leveldb since it was missing.
+2026/09/22-21:44:02.573 9334 Reusing MANIFEST D:\application\WTools\Entertainment\Pure Codec\x64\WebView2\EBWebView\Default\Local Storage\leveldb/MANIFEST-000001

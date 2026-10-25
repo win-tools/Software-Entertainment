@@ -2,6 +2,57 @@
 Historia wersji PotPlayer
 
 ----------------------------------------------------------
+[260819]
+----------------------------------------------------------
+* Wydano kompilację ARM64
+  https://t1.kakaocdn.net/potplayer/PotPlayer/Version/Latest/PotPlayerSetupARM64.exe
+
++ Dodano funkcję umożliwiającą indywidualne ustawienie działań dla lewego/prawego obszaru po dwukrotnym kliknięciu myszką
++ Dodano funkcję umożliwiającą użytkownikom ustawienie adresu listy broadcast
++ Dodano możliwość sortowania list odtwarzania według daty premiery
+
+- Naprawiono problem z odtwarzaniem filmów w ultrawysokiej rozdzielczości
+- Naprawiono problem z brakiem synchronizacji wbudowanego renderera audio w niektórych przypadkach
+- Wprowadzono poprawkę umożliwiającą wyświetlanie kolorowych emotikonów w napisach
+- Zmieniono funkcję wyszukiwania w listach odtwarzania na tryb filtrowania
+
+----------------------------------------------------------
+[260618]
+----------------------------------------------------------
+* Usunięto Kakao TV
+
++ Dodano funkcję wstrzymywania nawigacji podczas poruszania się po pasku nawigacyjnym
+
+- Znacznie poprawiono stabilność wewnętrzną
+- Naprawiono problem z dziwnym wyświetlaniem kolorów podczas przetwarzania RGB24
+- Ulepszono odtwarzanie niektórych strumieni HTTP
+- Ulepszono zarządzanie synchronizacją dla wbudowanego renderera audio
+- Naprawiono problem z nieprawidłowym odtwarzaniem niektórych plików MP4
+
+----------------------------------------------------------
+[260401]
+----------------------------------------------------------
++ Dodano możliwość wyświetlania napisów przy użyciu biblioteki libass
++ Dodano możliwość obsługi odtwarzania HLS/Dash za pomocą wbudowanych modułów
+
+- Poprawiono szybkość wyświetlania napisów
+- Poprawiono szybkość działania niektórych filtrów wideo
+- Naprawiono problem uniemożliwiający podłączenie zewnętrznego źródła dźwięku w przypadku obecności wielu plików audio
+- Naprawiono problem z nieprawidłowym wyświetlaniem niektórych znaków Unicode
+- Naprawiono problem z ciągłym rozpoczynaniem odtwarzania od początku po zakończeniu odtwarzania w tymczasowej kolejce odtwarzania
+- Zwiększono stabilność generowania (w czasie rzeczywistym) napisów z audio
+
+----------------------------------------------------------
+[260114]
+----------------------------------------------------------
++ Dodano funkcję dekodowania APV
+
+- Poprawiono obsługę zestawów znaków w napisach 
+- Naprawiono problem braku synchronizacji generowanych napisów z dźwiękiem w czasie rzeczywistym podczas odtwarzania strumieniowego na żywo
+- Rozwiązano problem z niemożnością zakończenia odtwarzania niektórych plików MKV
+- Naprawiono problem z powolnym odtwarzaniem niektórych plików MP4
+
+----------------------------------------------------------
 [250909]
 ----------------------------------------------------------
 + Dodano funkcję generowania napisów z audio w czasie rzeczywistym
@@ -26,7 +77,7 @@ Historia wersji PotPlayer
 - Ulepszono funkcję odtwarzania uszkodzonych plików MKV
 
 ----------------------------------------------------------
-[250514]
+[250512]
 ----------------------------------------------------------
 + Dodano możliwość zmiany obsługi czcionki napisów
 

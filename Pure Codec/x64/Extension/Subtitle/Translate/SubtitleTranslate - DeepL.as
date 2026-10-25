@@ -13,6 +13,8 @@
 // string GetPasswordText()													-> get password text for login dialog
 // string ServerLogin(string User, string Pass)								-> login
 // string ServerLogout()													-> logout
+// string GetWebAccountUrl()							-> login process by WebBrowser
+// string GetWebAccountDomain()							-> transport cookie domain for login
 //------------------------------------------------------------------------------------------------
 // array<string> GetSrcLangs() 												-> get source language
 // array<string> GetDstLangs() 												-> get target language
@@ -197,12 +199,13 @@ string Translate(string Text, string &in SrcLang, string &in DstLang)
 	
 		string src;
 		if (!SrcLang.empty()) src = "&source_lang=" + SrcLang;
-		string url = "https://api.deepl.com/v2/translate?auth_key=" + api_key + "&text=" + enc + src + "&target_lang=" + DstLang;
+		string url = "https://api.deepl.com/v2/translate?text=" + enc + src + "&target_lang=" + DstLang;
+		string header = "Authorization: DeepL-Auth-Key " + api_key + "\r\n";
 		string text;
 		while (true)
 		{
 			if (isFreeAPI) url.replace("api.", "api-free.");
-			text = HostUrlGetString(url, UserAgent);
+			text = HostUrlGetString(url, UserAgent, header);
 			if (!isFreeAPI && text.find("api-free") > 0)
 			{
 				isFreeAPI = true;

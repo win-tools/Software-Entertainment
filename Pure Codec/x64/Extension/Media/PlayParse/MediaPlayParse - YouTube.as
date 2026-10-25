@@ -14,11 +14,18 @@
 // string ServerCheck(string User, string Pass) 		-> server check
 // string ServerLogin(string User, string Pass) 		-> login
 // void ServerLogout() 									-> logout
+// string GetWebAccountUrl()							-> login process by WebBrowser
+// string GetWebAccountDomain()							-> transport cookie domain for login
 //------------------------------------------------------------------------------------------------
 // bool PlayitemCheck(const string &in)					-> check playitem
 // array<dictionary> PlayitemParse(const string &in)	-> parse playitem
+// void PlayitemCancel()								-> cancel playitem
 // bool PlaylistCheck(const string &in)					-> check playlist
 // array<dictionary> PlaylistParse(const string &in)	-> parse playlist
+// void PlaylistCancel()								-> cancel playlist
+// string GetStatus()									-> display status
+// string GetBroadcastListUrl()							-> get broadcast list url
+// string GetBroadcastListScript()						-> for WebView2::AddScriptToExecuteOnDocumentCreated for script process
 
 string GetTitle()
 {
@@ -35,45 +42,381 @@ string GetDesc()
 	return "https://www.youtube.com/";
 }
 
-string YOUTUBE_MP_URL		= "://www.youtube.com/";
-string YOUTUBE_PL_URL		= "://www.youtube.com/playlist?";
-string YOUTUBE_USER_URL    	= "://www.youtube.com/user/";
-string YOUTUBE_USER_SHORT_URL	= "://www.youtube.com/c/";
-string YOUTUBE_CHANNEL_URL	= "://www.youtube.com/channel/";
-string YOUTUBE_URL_LIBRARY	= "youtube.com/@";
-string YOUTUBE_URL		= "://www.youtube.com/watch?";
-string YOUTUBE_URL2		= "://www.youtube.com/v/";
-string YOUTUBE_URL3		= "://www.youtube.com/embed/";
-string YOUTUBE_URL4		= "://www.youtube.com/attribution_link?a=";
-string YOUTUBE_URL5		= "://www.youtube.com/shorts";
-string YOUTUBE_URL6		= "://www.youtube.com/clip";
-string YOUTU_BE_URL1		= "://youtu.be/";
-string YOUTU_BE_URL2		= "://youtube.com/";
-string YOUTU_BE_URL3		= "://m.youtube.com/";
-string YOUTU_BE_URL4		= "://gaming.youtube.com/";
-string YOUTU_BE_URL5		= "://music.youtube.com/";
-string VIMEO_URL		= "://vimeo.com/";
+string GetWebAccountUrl()
+{
+	return "https://accounts.google.com/ServiceLogin?service=youtube";
+}
 
-string MATCH_STREAM_MAP_START		= "\"url_encoded_fmt_stream_map\"";
-string MATCH_STREAM_MAP_START2		= "url_encoded_fmt_stream_map=";
-string MATCH_ADAPTIVE_FMTS_START	= "\"adaptive_fmts\"";
-string MATCH_ADAPTIVE_FMTS_START2	= "adaptive_fmts=";
+string GetWebAccountDomain()
+{
+	return "www.google.com;www.youtube.com";
+}
+
+string GetBroadcastListUrl()
+{
+	return "https://www.youtube.com/;https://m.youtube.com/";
+}
+
+string GetBroadcastListScript()
+{
+	return "(() => {\n"
+		"  if (window.__potPlayerClickBlocker) return;\n"
+		"  if (!window.chrome || !chrome.webview) return;\n"
+		"  window.__potPlayerClickBlocker = true;\n"
+		"\n"
+		"  const messageType = 'potPlayer.video-click';\n"
+		"  const pageHost = location.hostname.toLowerCase().replace(/^www\\./, '');\n"
+		"  const isYouTubePage = pageHost === 'youtube.com' || pageHost.endsWith('.youtube.com');\n"
+		"  const videoAttributes = ['href', 'data-href', 'data-url'];\n"
+		"  const channelSelector = [\n"
+		"    'ytd-channel-name',\n"
+		"    'ytm-channel-name',\n"
+		"    'ytm-badge-and-byline-renderer',\n"
+		"    'ytm-channel-thumbnail-with-link-renderer',\n"
+		"    '.compact-media-item-byline',\n"
+		"    '.media-item-byline',\n"
+		"    '.ytm-badge-and-byline-item-byline',\n"
+		"    '.ytm-badge-and-byline-item',\n"
+		"    '#channel-name',\n"
+		"    '#byline',\n"
+		"    'a[href^=\"/@\"]',\n"
+		"    'a[href^=\"/channel/\"]',\n"
+		"    'a[href^=\"/c/\"]',\n"
+		"    'a[href^=\"/user/\"]'\n"
+		"  ].join(',');\n"
+		"  const preferredSelector = [\n"
+		"    'a[href*=\"/watch\"]',\n"
+		"    'a[href*=\"/shorts/\"]',\n"
+		"    'a[href*=\"/live/\"]',\n"
+		"    'a[href*=\"youtu.be/\"]',\n"
+		"    '[data-href*=\"/watch\"]',\n"
+		"    '[data-href*=\"/shorts/\"]',\n"
+		"    '[data-href*=\"/live/\"]',\n"
+		"    '[data-url*=\"/watch\"]',\n"
+		"    '[data-url*=\"/shorts/\"]',\n"
+		"    '[data-url*=\"/live/\"]'\n"
+		"  ].join(',');\n"
+		"  const cardSelector = [\n"
+		"    'ytd-rich-item-renderer',\n"
+		"    'ytd-video-renderer',\n"
+		"    'ytd-compact-video-renderer',\n"
+		"    'ytd-grid-video-renderer',\n"
+		"    'ytd-playlist-video-renderer',\n"
+		"    'ytm-video-with-context-renderer',\n"
+		"    'ytm-compact-video-renderer',\n"
+		"    'ytm-rich-item-renderer'\n"
+		"  ].join(',');\n"
+		"  const playerSelector = [\n"
+		"    '#movie_player',\n"
+		"    '.html5-video-player',\n"
+		"    'ytd-player'\n"
+		"  ].join(',');\n"
+		"\n"
+		"  const seekControlSelector = [\n"
+		"    '[role=\"slider\"]',\n"
+		"    '[role=\"progressbar\"]',\n"
+		"    '[role=\"scrollbar\"]',\n"
+		"    '[aria-valuemin][aria-valuemax]',\n"
+		"    '.ytp-progress-bar',\n"
+		"    '.ytp-progress-list',\n"
+		"    '.ytp-scrubber-container',\n"
+		"    '.ytp-hover-progress',\n"
+		"    '.ytp-play-progress',\n"
+		"    '.ytp-load-progress',\n"
+		"    '.ytp-chapter-hover-container',\n"
+		"    '.ytp-timed-markers-container',\n"
+		"    'tp-yt-paper-slider',\n"
+		"    'paper-slider',\n"
+		"    'yt-thumbnail-overlay-progress-bar-view-model',\n"
+		"    'ytd-thumbnail-overlay-resume-playback-renderer',\n"
+		"    'ytm-thumbnail-overlay-resume-playback-renderer'\n"
+		"  ].join(',');\n"
+		"\n"
+		"  function parseVideoUrl(value) {\n"
+		"    try {\n"
+		"      const u = new URL(value, location.href);\n"
+		"      const host = u.hostname.toLowerCase().replace(/^www\\./, '');\n"
+		"\n"
+		"      if (host === 'youtu.be' && u.pathname.length > 1) return { url: u.href, score: 100 };\n"
+		"      if (host === 'youtube.com' || host === 'm.youtube.com' || host === 'youtube-nocookie.com') {\n"
+		"        const embedMatch = u.pathname.match(/^\\/embed\\/([^/?#]+)/);\n"
+		"        if (embedMatch) return { url: 'https://www.youtube.com/watch?v=' + encodeURIComponent(embedMatch[1]), score: 100 };\n"
+		"        if (u.pathname === '/watch' && u.searchParams.get('v')) return { url: u.href, score: 100 };\n"
+		"        if (u.pathname.startsWith('/shorts/') && u.pathname.length > 8) return { url: u.href, score: 100 };\n"
+		"        if (u.pathname.startsWith('/live/') && u.pathname.length > 6) return { url: u.href, score: 100 };\n"
+		"      }\n"
+		"    } catch (e) {\n"
+		"    }\n"
+		"    return null;\n"
+		"  }\n"
+		"\n"
+		"  function isYouTubeChannelUrl(value) {\n"
+		"    try {\n"
+		"      const u = new URL(value, location.href);\n"
+		"      const host = u.hostname.toLowerCase().replace(/^www\\./, '');\n"
+		"      if (host !== 'youtube.com' && host !== 'm.youtube.com') return false;\n"
+		"\n"
+		"      const parts = u.pathname.split('/').filter(Boolean);\n"
+		"      if (!parts.length) return false;\n"
+		"\n"
+		"      const first = decodeURIComponent(parts[0]).toLowerCase();\n"
+		"      return first.startsWith('@') ||\n"
+		"        ((first === 'channel' || first === 'c' || first === 'user') && parts.length > 1);\n"
+		"    } catch (e) {\n"
+		"    }\n"
+		"    return false;\n"
+		"  }\n"
+		"\n"
+		"  function getVideoUrl(value) {\n"
+		"    const result = parseVideoUrl(value);\n"
+		"    return result ? result.url : '';\n"
+		"  }\n"
+		"\n"
+		"  function firstElement(target) {\n"
+		"    return target && target.nodeType === Node.TEXT_NODE ? target.parentElement : target;\n"
+		"  }\n"
+		"\n"
+		"  function getEventElements(e) {\n"
+		"    const path = e.composedPath ? e.composedPath() : null;\n"
+		"    if (path && path.length) return path.filter(node => node && node.nodeType === Node.ELEMENT_NODE);\n"
+		"\n"
+		"    const elements = [];\n"
+		"    for (let node = firstElement(e.target); node && node !== document; node = node.parentElement) {\n"
+		"      elements.push(node);\n"
+		"    }\n"
+		"    return elements;\n"
+		"  }\n"
+		"\n"
+		"  function getNodeVideoResult(node) {\n"
+		"    if (!node) return null;\n"
+		"\n"
+		"    if (node.href) {\n"
+		"      const result = parseVideoUrl(node.href);\n"
+		"      if (result) return result;\n"
+		"    }\n"
+		"\n"
+		"    if (node.getAttribute) {\n"
+		"      for (const attr of videoAttributes) {\n"
+		"        const value = node.getAttribute(attr);\n"
+		"        if (!value) continue;\n"
+		"\n"
+		"        const result = parseVideoUrl(value);\n"
+		"        if (result) return result;\n"
+		"      }\n"
+		"\n"
+		"      const videoId = node.getAttribute('data-video-id') || node.getAttribute('video-id');\n"
+		"      if (videoId && /^[a-z0-9_-]{6,}$/i.test(videoId) && isYouTubePage) {\n"
+		"        return { url: 'https://www.youtube.com/watch?v=' + encodeURIComponent(videoId), score: 95 };\n"
+		"      }\n"
+		"    }\n"
+		"\n"
+		"    return null;\n"
+		"  }\n"
+		"\n"
+		"  function findDescendantVideoResult(node) {\n"
+		"    if (!node || !node.querySelector) return null;\n"
+		"\n"
+		"    const preferred = node.querySelector(preferredSelector);\n"
+		"    if (preferred) {\n"
+		"      const result = getNodeVideoResult(preferred);\n"
+		"      if (result) return result;\n"
+		"    }\n"
+		"\n"
+		"    if (!node.querySelectorAll) return null;\n"
+		"\n"
+		"    let best = null;\n"
+		"    let scanned = 0;\n"
+		"    const links = node.querySelectorAll('a[href], [data-href], [data-url]');\n"
+		"    for (const link of links) {\n"
+		"      const result = getNodeVideoResult(link);\n"
+		"      if (result && (!best || result.score > best.score)) {\n"
+		"        best = result;\n"
+		"        if (best.score >= 100) break;\n"
+		"      }\n"
+		"\n"
+		"      scanned++;\n"
+		"      if (scanned >= 32) break;\n"
+		"    }\n"
+		"    return best;\n"
+		"  }\n"
+		"\n"
+		"  function isSeekControlElement(node) {\n"
+		"    if (!node || !node.tagName) return false;\n"
+		"    if (node.tagName === 'PROGRESS') return true;\n"
+		"\n"
+		"    const role = node.getAttribute && node.getAttribute('role');\n"
+		"    if (role === 'slider' || role === 'progressbar' || role === 'scrollbar') return true;\n"
+		"\n"
+		"    return !!(node.matches && node.matches(seekControlSelector));\n"
+		"  }\n"
+		"\n"
+		"  function isControlElement(node) {\n"
+		"    if (!node || !node.tagName) return false;\n"
+		"    if (isSeekControlElement(node)) return true;\n"
+		"\n"
+		"    const tag = node.tagName;\n"
+		"    if (tag === 'BUTTON' || tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA' || tag === 'SUMMARY') return true;\n"
+		"\n"
+		"    const role = node.getAttribute && node.getAttribute('role');\n"
+		"    return role === 'button' || role === 'menuitem' || role === 'checkbox' || role === 'radio' || role === 'switch';\n"
+		"  }\n"
+		"\n"
+		"  function isYouTubeChannelElement(node) {\n"
+		"    if (!node || !node.getAttribute) return false;\n"
+		"    if (node.href && isYouTubeChannelUrl(node.href)) return true;\n"
+		"\n"
+		"    for (const attr of videoAttributes) {\n"
+		"      const value = node.getAttribute(attr);\n"
+		"      if (value && isYouTubeChannelUrl(value)) return true;\n"
+		"    }\n"
+		"\n"
+		"    return !!(node.matches && node.matches(channelSelector)) ||\n"
+		"      !!(node.closest && node.closest(channelSelector));\n"
+		"  }\n"
+		"\n"
+		"  function isPlayerNode(node) {\n"
+		"    if (!node) return false;\n"
+		"    if (node.tagName === 'VIDEO') return true;\n"
+		"    return !!(node.matches && node.matches(playerSelector));\n"
+		"  }\n"
+		"\n"
+		"  function findVideoUrl(elements) {\n"
+		"    let allowCardLookup = true;\n"
+		"\n"
+		"    for (const node of elements) {\n"
+		"      const result = getNodeVideoResult(node);\n"
+		"      if (result) return result.url;\n"
+		"\n"
+		"      if (isControlElement(node) && !isPlayerNode(node)) allowCardLookup = false;\n"
+		"      if (allowCardLookup && node.matches && node.matches(cardSelector)) {\n"
+		"        const childResult = findDescendantVideoResult(node);\n"
+		"        if (childResult) return childResult.url;\n"
+		"      }\n"
+		"    }\n"
+		"    return '';\n"
+		"  }\n"
+		"\n"
+		"  let lastPostedUrl = '';\n"
+		"  let lastPostedTime = 0;\n"
+		"  let activeUrl = '';\n"
+		"  let activeUntil = 0;\n"
+		"  let activeX = 0;\n"
+		"  let activeY = 0;\n"
+		"\n"
+		"  function getEventPoint(e) {\n"
+		"    if (typeof e.clientX === 'number' && typeof e.clientY === 'number') return { x: e.clientX, y: e.clientY };\n"
+		"    if (e.changedTouches && e.changedTouches.length) return { x: e.changedTouches[0].clientX, y: e.changedTouches[0].clientY };\n"
+		"    if (e.touches && e.touches.length) return { x: e.touches[0].clientX, y: e.touches[0].clientY };\n"
+		"    return null;\n"
+		"  }\n"
+		"\n"
+		"  function canUseActiveUrl(e, now) {\n"
+		"    if (!(e.type === 'pointerup' || e.type === 'mouseup' || e.type === 'touchend' ||\n"
+		"      e.type === 'click' || e.type === 'auxclick' || e.type === 'dblclick')) return false;\n"
+		"    if (!activeUrl || now >= activeUntil) return false;\n"
+		"\n"
+		"    const point = getEventPoint(e);\n"
+		"    if (!point) return false;\n"
+		"\n"
+		"    const dx = point.x - activeX;\n"
+		"    const dy = point.y - activeY;\n"
+		"    return dx * dx + dy * dy <= 100;\n"
+		"  }\n"
+		"\n"
+		"  function getClickedVideoUrl(e) {\n"
+		"    const elements = getEventElements(e);\n"
+		"    if (elements.some(isSeekControlElement)) {\n"
+		"      activeUrl = '';\n"
+		"      activeUntil = 0;\n"
+		"      return '';\n"
+		"    }\n"
+		"    if (elements.some(isYouTubeChannelElement)) {\n"
+		"      activeUrl = '';\n"
+		"      activeUntil = 0;\n"
+		"      return '';\n"
+		"    }\n"
+		"\n"
+		"    let url = findVideoUrl(elements);\n"
+		"    const now = Date.now();\n"
+		"\n"
+		"    if (!url && canUseActiveUrl(e, now)) url = activeUrl;\n"
+		"    if (!url && elements.some(isPlayerNode)) url = getVideoUrl(location.href);\n"
+		"    if (url) {\n"
+		"      const point = getEventPoint(e);\n"
+		"\n"
+		"      activeUrl = url;\n"
+		"      activeUntil = now + 400;\n"
+		"      if (point) {\n"
+		"        activeX = point.x;\n"
+		"        activeY = point.y;\n"
+		"      }\n"
+		"    }\n"
+		"    return url;\n"
+		"  }\n"
+		"\n"
+		"  function postVideoUrl(url) {\n"
+		"    const now = Date.now();\n"
+		"    if (url === lastPostedUrl && now - lastPostedTime < 500) return;\n"
+		"\n"
+		"    lastPostedUrl = url;\n"
+		"    lastPostedTime = now;\n"
+		"    chrome.webview.postMessage({\n"
+		"      type: messageType,\n"
+		"      url: url\n"
+		"    });\n"
+		"  }\n"
+		"\n"
+		"  function blockVideoEvent(e) {\n"
+		"    e.preventDefault();\n"
+		"    e.stopPropagation();\n"
+		"    e.stopImmediatePropagation();\n"
+		"  }\n"
+		"\n"
+		"  function onVideoInput(e) {\n"
+		"    if (typeof e.button === 'number' && e.button === 2) return;\n"
+		"\n"
+		"    const url = getClickedVideoUrl(e);\n"
+		"    if (!url) return;\n"
+		"\n"
+		"    blockVideoEvent(e);\n"
+		"    postVideoUrl(url);\n"
+		"  }\n"
+		"\n"
+		"  const eventOptions = { capture: true, passive: false };\n"
+		"  window.addEventListener('click', onVideoInput, eventOptions);\n"
+		"})();\n";
+}
+
+string YOUTUBE_MP_URL			= "://www.youtube.com/";
+string YOUTUBE_PL_URL			= "://www.youtube.com/playlist?";
+string YOUTUBE_USER_URL    		= "://www.youtube.com/user/";
+string YOUTUBE_USER_SHORT_URL	= "://www.youtube.com/c/";
+string YOUTUBE_CHANNEL_URL		= "://www.youtube.com/channel/";
+string YOUTUBE_URL_LIBRARY		= "youtube.com/@";
+string YOUTUBE_URL				= "://www.youtube.com/watch?";
+string YOUTUBE_URL2				= "://www.youtube.com/v/";
+string YOUTUBE_URL3				= "://www.youtube.com/embed/";
+string YOUTUBE_URL4				= "://www.youtube.com/attribution_link?a=";
+string YOUTUBE_URL5				= "://www.youtube.com/shorts";
+string YOUTUBE_URL6				= "://www.youtube.com/clip";
+string YOUTU_BE_URL1			= "://youtu.be/";
+string YOUTU_BE_URL2			= "://youtube.com/";
+string YOUTU_BE_URL3			= "://m.youtube.com/";
+string YOUTU_BE_URL4			= "://gaming.youtube.com/";
+string YOUTU_BE_URL5			= "://music.youtube.com/";
+string VIMEO_URL				= "://vimeo.com/";
+
 string MATCH_HLSMPD_START		= "\"hlsManifestUrl\"";
 string MATCH_DASHMPD_START		= "\"dashManifestUrl\"";
-string MATCH_WIDTH_START		= "meta property=\"og:video:width\" content=\"";
 string MATCH_JS_START			= "\"js\":";
 string MATCH_JS_START_2			= "'PREFETCH_JS_RESOURCES': [\"";
 string MATCH_JS_START_3			= "\"PLAYER_JS_URL\":\"";
-string MATCH_END					= "\"";
+string MATCH_END				= "\"";
 
-string MATCH_PLAYER_RESPONSE       = "\"player_response\":\"";
-string MATCH_PLAYER_RESPONSE2      = "player_response=";
-string MATCH_PLAYER_RESPONSE_END   = "}\"";
+string MATCH_PLAYER_RESPONSE	= "ytInitialPlayerResponse = ";
 
-string MATCH_PLAYER_RESPONSE_2     = "ytInitialPlayerResponse = ";
-
-string MATCH_CHAPTER_RESPONSE      = "chapteredPlayerBarRenderer";
-string MATCH_CHAPTER_RESPONSE2     = "key\":\"DESCRIPTION_CHAPTERS\",\"value\"";
+string MATCH_CHAPTER_RESPONSE	= "chapteredPlayerBarRenderer";
+string MATCH_CHAPTER_RESPONSE2	= "key\":\"DESCRIPTION_CHAPTERS\",\"value\"";
 
 bool Is60Frame(int iTag)
 {
@@ -662,41 +1005,6 @@ string PlayerYouTubeSearchJS(string data)
 	return "";
 }
 
-enum youtubeFuncType
-{
-	funcNONE = -1,
-	funcDELETE,
-	funcREVERSE,
-	funcSWAP
-};
-
-void Delete(string &a, int b)
-{
-	a.erase(0, b);
-}
-
-void Swap(string &a, int b)
-{
-	uint8 c = a[0];
-
-	b %= a.size();
-	a[0] = a[b];
-	a[b] = c;
-};
-
-void Reverse(string &a)
-{
-	int len = a.size();
-
-	for (int i = 0; i < len / 2; ++i)
-	{
-		uint8 c = a[i];
-
-		a[i] = a[len - i - 1];
-		a[len - i - 1] = c;
-	}
-}
-
 string ReplaceCodecName(string name, string id)
 {
 	int s = name.find(id);
@@ -729,190 +1037,6 @@ string GetCodecName(string type)
 	type = ReplaceCodecName(type, "mp4a");
 
 	return type;
-}
-
-string GetFunction(string str)
-{
-	array<string> signatureRegExps =
-	{
-		"(?:\\b|[^a-zA-Z0-9$])([a-zA-Z0-9$]{2,})\\s*=\\s*function\\(\\s*a\\s*\\)\\s*\\{\\s*a\\s*=\\s*a\\.split\\(\\s*\"\"\\s*\\)",
-		"(?:\\b|[^a-zA-Z0-9$])([a-zA-Z0-9$]{2,})\\s*=\\s*function\\(\\s*a\\s*\\)\\s*\\{\\s*a\\s*=\\s*a\\.split\\(\\s*\"\"\\s*\\);[a-zA-Z0-9$]{2}\\.[a-zA-Z0-9$]{2}\\(a,\\d+\\)",
-		"\\b[cs]\\s*&&\\s*[adf]\\.set\\([^,]+\\s*,\\s*encodeURIComponent\\s*\\(\\s*([a-zA-Z0-9$]+)\\(",
-		"\\b[a-zA-Z0-9]+\\s*&&\\s*[a-zA-Z0-9]+\\.set\\([^,]+\\s*,\\s*encodeURIComponent\\s*\\(\\s*([a-zA-Z0-9$]+)\\(",
-		"([a-zA-Z0-9$]+)\\s*=\\s*function\\(\\s*a\\s*\\)\\s*\\{\\s*a\\s*=\\s*a\\.split\\(\\s*\"\"\\s*\\)",
-		"([\"\\'])signature\\1\\s*,\\s*([a-zA-Z0-9$]+)\\(",
-		"\\.sig\\|\\|([a-zA-Z0-9$]+)\\(",
-		"yt\\.akamaized\\.net/\\)\\s*\\|\\|\\s*.*?\\s*[cs]\\s*&&\\s*[adf]\\.set\\([^,]+\\s*,\\s*(?:encodeURIComponent\\s*\\()?\\s*([a-zA-Z0-9$]+)\\(",
-		"\\b[cs]\\s*&&\\s*[adf]\\.set\\([^,]+\\s*,\\s*([a-zA-Z0-9$]+)\\(",
-		"\\b[a-zA-Z0-9]+\\s*&&\\s*[a-zA-Z0-9]+\\.set\\([^,]+\\s*,\\s*([a-zA-Z0-9$]+)\\(",
-		"\\bc\\s*&&\\s*a\\.set\\([^,]+\\s*,\\s*\\([^)]*\\)\\s*\\(\\s*([a-zA-Z0-9$]+)\\(",
-		"\\bc\\s*&&\\s*[a-zA-Z0-9]+\\.set\\([^,]+\\s*,\\s*\\([^)]*\\)\\s*\\(\\s*([a-zA-Z0-9$]+)\\(",
-		"\\bc\\s*&&\\s*[a-zA-Z0-9]+\\.set\\([^,]+\\s*,\\s*\\([^)]*\\)\\s*\\(\\s*([a-zA-Z0-9$]+)\\("
-	};
-	for (int i = 0, len = signatureRegExps.size(); i < len; i++)
-	{
-		string ret = HostRegExpParse(str, signatureRegExps[i]);
-		if (!ret.empty()) return ret;
-	}
-
-	string r, sig = "\"signature\"";
-	int p = 0;
-	while (true)
-	{
-		int e = str.find(sig, p);
-
-		if (e < 0) break;
-		int s1 = str.find("(", e);
-		int s2 = str.find(")", e);
-		if (s1 > s2)
-		{
-			p = e + 10;
-			continue;
-		}
-		p = e + sig.size() + 1;
-		r = str.substr(p, s1 - p);
-		break;
-	}
-	r.Trim(",");
-	r.Trim();
-	r.Trim(",");
-	r.Trim();
-	return r;
-}
-
-string SignatureDecode(string url, string signature, string append, string data, string js_data, array<youtubeFuncType> &JSFuncs, array<int> &JSFuncArgs)
-{
-	if (JSFuncs.size() == 0 && !js_data.empty())
-	{
-		string funcName = GetFunction(js_data);
-
-		if (!funcName.empty())
-		{
-			string funcRegExp = funcName + "=function\\(a\\)\\{([^\\n]+)\\};";
-			string funcBody = HostRegExpParse(data, funcRegExp);
-
-			if (funcBody.empty())
-			{
-				string varfunc = funcName + "=function(a){";
-
-				funcBody = GetEntry(js_data, varfunc, "};");
-			}
-			if (!funcBody.empty())
-			{
-				string funcGroup;
-				array<string> funcList;
-				array<string> funcCodeList;
-
-				array<string> code = funcBody.split(";");
-				for (int i = 0, len = code.size(); i < len; i++)
-				{
-					string line = code[i];
-
-					if (!line.empty())
-					{
-						if (line.find("split") >= 0 || line.find("return") >= 0) continue;
-						funcList.insertLast(line);
-						if (funcGroup.empty())
-						{
-							int k = line.find(".");
-
-							if (k > 0) funcGroup = line.Left(k);
-						}
-					}
-				}
-
-				if (!funcGroup.empty())
-				{
-					string tmp = GetEntry(js_data, "var " + funcGroup + "={", "};");
-
-					if (!tmp.empty())
-					{
-						tmp.replace("\n", "");
-						funcCodeList = tmp.split("},");
-					}
-				}
-
-				if (!funcList.empty() && !funcCodeList.empty())
-				{
-					for (int j = 0, len = funcList.size(); j < len; j++)
-					{
-						string func = funcList[j];
-
-						if (!func.empty())
-						{
-							int funcArg = 0;
-							string funcArgs = GetEntry(func, "(", ")");
-							array<string> args = funcArgs.split(",");
-
-							if (args.size() >= 1)
-							{
-								string arg = args[args.size() - 1];
-
-								funcArg = parseInt(arg);
-							}
-
-							string funcName = GetEntry(func, funcGroup + '.', "(");
-							if (funcName.empty())
-							{
-								funcName = GetEntry(func, funcGroup, "(");
-								if (funcName.empty()) continue;
-							}
-							if (funcName.find("[") >= 0)
-							{
-								funcName.replace("[", "");
-								funcName.replace("]", "");
-							}
-							funcName += ":function";
-
-							youtubeFuncType funcType = youtubeFuncType::funcNONE;
-							for (int k = 0, len = funcCodeList.size(); k < len; k++)
-							{
-								string funcCode = funcCodeList[k];
-
-								if (funcCode.find(funcName) >= 0)
-								{
-									if (funcCode.find("splice") > 0) funcType = youtubeFuncType::funcDELETE;
-									else if (funcCode.find("reverse") > 0) funcType = youtubeFuncType::funcREVERSE;
-									else if (funcCode.find(".length]") > 0) funcType = youtubeFuncType::funcSWAP;
-									break;
-								}
-							}
-							if (funcType != youtubeFuncType::funcNONE)
-							{
-								JSFuncs.insertLast(funcType);
-								JSFuncArgs.insertLast(funcArg);
-							}
-						}
-					}
-				}
-			}
-		}
-	}
-
-	if (!JSFuncs.empty() && JSFuncs.size() == JSFuncArgs.size())
-	{
-		for (int i = 0, len = JSFuncs.size(); i < len; i++)
-		{
-			youtubeFuncType func = JSFuncs[i];
-			int arg = JSFuncArgs[i];
-
-			switch (func)
-			{
-			case youtubeFuncType::funcDELETE:
-				Delete(signature, arg);
-				break;
-			case youtubeFuncType::funcSWAP:
-				Swap(signature, arg);
-				break;
-			case youtubeFuncType::funcREVERSE:
-				Reverse(signature);
-				break;
-			}
-		}
-		url = url + append + signature;
-	}
-
-	return url;
 }
 
 bool PlayerYouTubeCheck(string url)
@@ -1061,12 +1185,13 @@ string GetYTCFG(string videoId)
 		if (!data.empty())
 		{
 			ret = ParseYTCFG(data);
+			if (!ret.empty()) break;
 		}
 	}
 	return ret;
 }
 
-string GetVisitorData(string videoId, string ytcfg)
+string GetVisitorData(string videoId, string &ytcfg)
 {
 	string visitorData;
 
@@ -1088,10 +1213,7 @@ string GetVisitorData(string videoId, string ytcfg)
 				{
 					JsonValue client = INNERTUBE_CONTEXT["client"];
 
-					if (client.isObject())
-					{
-						VISITOR_DATA = client["visitorData"];
-					}
+					if (client.isObject()) VISITOR_DATA = client["visitorData"];
 				}
 			}
 			if (VISITOR_DATA.isString()) visitorData = VISITOR_DATA.asString();
@@ -1101,52 +1223,55 @@ string GetVisitorData(string videoId, string ytcfg)
 	return visitorData;
 }
 
-string GetVideoJson(string videoId, string ytcfg, bool isLive)
+string GetSTS(string videoId, string &ytcfg)
 {
-	string userAgent, headers, postData;
+	string sts;
 
-	if (isLive)
+	if (ytcfg.empty()) ytcfg = GetYTCFG(videoId);
+	if (!ytcfg.empty())
 	{
-		userAgent = "com.google.android.apps.youtube.vr.oculus/1.60.19 (Linux; U; Android 12L; eureka-user Build/SQ3A.220605.009.A1) gzip";
-		headers = "X-YouTube-Client-Name: 28\r\n"
-			"X-YouTube-Client-Version: 1.60.19\r\n"
-			"Origin: https://www.youtube.com\r\n"
-			"Content-Type: application/json\r\n";
-		if (isLive)
+		JsonReader reader;
+		JsonValue root;
+
+		if (reader.parse(ytcfg, root) && root.isObject())
 		{
-			postData = "{\"context\": {\"client\": {\"clientName\": \"ANDROID_VR\", \"clientVersion\": \"1.60.19\", \"clientScreen\": \"EMBED\"}, "
-				"\"thirdParty\": {\"embedUrl\": \"https://google.com\"}}, \"videoId\": \"" + videoId + "\", \"params\": \"wgYCCAA=\", \"contentCheckOk\": true, \"racyCheckOk\": true}";
-		}
-		else
-		{
-			postData = "{\"context\": {\"client\": {\"clientName\": \"ANDROID_VR\", \"clientVersion\": \"1.60.19\", \"hl\": \"" + HostIso639LangName() + "\"}}, "
-				"\"videoId\": \"" + videoId + "\", \"params\": \"wgYCCAA=\", \"playbackContext\": {\"contentPlaybackContext\": {\"html5Preference\": \"HTML5_PREF_WANTS\"}}, \"contentCheckOk\": true, \"racyCheckOk\": true}";
+			JsonValue STS = root["STS"];
+			if (!STS.isString() && !STS.isInt())
+			{
+				JsonValue INNERTUBE_CONTEXT = root["INNERTUBE_CONTEXT"];
+
+				if (INNERTUBE_CONTEXT.isObject())
+				{
+					JsonValue client = INNERTUBE_CONTEXT["client"];
+
+					if (client.isObject()) STS = client["STS"];
+				}
+			}
+		
+			if (STS.isString() || STS.isInt()) sts = STS.asString();
 		}
 	}
-	else
+	if (sts.empty()) sts = "20432";
+	return sts;
+}
+
+string GetVideoJson(string videoId, string &ytcfg, bool isLive)
+{
+	string userAgent, headers, postData;
+	string lang = HostIso639LangName();
+
+	if (true)
 	{
-		if (isLive)
-		{
-			postData = "{\"contentCheckOk\": true, \"context\": {\"client\": {\"clientName\": \"MWEB\", \"clientVersion\": \"2.20250311.03.00\", "
-				"\"hl\": \"" + HostIso639LangName() + "\", \"timeZone\": \"UTC\", \"utcOffsetMinutes\": 0}}, \"playbackContext\": {\"contentPlaybackContext\": {\"html5Preference\": \"HTML5_PREF_WANTS\"}}, "
-				"\"racyCheckOk\": true, \"videoId\": \"" + videoId + "\"}";
-			headers = "X-YouTube-Client-Name: 2\r\n"
-				"X-YouTube-Client-Version: 2.20250311.03.00\r\n"
-				"Origin: https://www.youtube.com\r\n"
-				"Content-Type: application/json\r\n";
-			userAgent = "Mozilla/5.0 (iPad; CPU OS 16_7_10 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1,gzip(gfe)";
-		}
-		else
-		{
-			postData = "{\"contentCheckOk\": true, \"context\": {\"client\": {\"clientName\": \"ANDROID\", \"clientVersion\": \"20.10.38\", "
-				"\"hl\": \"" + HostIso639LangName() + "\", \"osName\": \"Android\", \"osVersion\": \"11\", "
-				"\"timeZone\": \"UTC\", \"utcOffsetMinutes\": 0}}, \"playbackContext\": {\"contentPlaybackContext\": {\"html5Preference\": \"HTML5_PREF_WANTS\"}}, \"racyCheckOk\" : true, \"videoId\" : \"" + videoId + "\"}";
-			headers = "X-YouTube-Client-Name: 3\r\n"
-				"X-YouTube-Client-Version: 20.10.38\r\n"
-				"Origin: https://www.youtube.com\r\n"
-				"Content-Type: application/json\r\n";
-			userAgent = "com.google.android.youtube/20.10.38 (Linux; U; Android 11) gzip";
-		}
+		userAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 15_7_3) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.5 Safari/605.1.15";
+		headers = "X-YouTube-Client-Name: 101\r\n"
+			"X-YouTube-Client-Version: 1.02\r\n"
+			"Origin: https://www.youtube.com\r\n"
+			"Content-Type: application/json\r\n";
+		postData =
+			"{\"context\": {\"client\": {\"clientName\": \"VISIONOS\", \"clientVersion\": \"1.02\", "
+			"\"deviceMake\": \"Apple\", \"deviceModel\": \"RealityDevice17,1\", \"hl\": \"" + lang + "\", "
+			"\"osName\": \"visionOS\", \"osVersion\": \"26.5.23O471\"}}, "
+			"\"videoId\": \"" + videoId + "\", \"contentCheckOk\": true, \"racyCheckOk\": true}";
 	}
 
 	string visitorData = GetVisitorData(videoId, ytcfg);
@@ -1163,8 +1288,6 @@ string PlayitemParse(const string &in path, dictionary &MetaData, array<dictiona
 	{
 		string fn = path;
 		string tmp_fn = fn;
-		array<youtubeFuncType> JSFuncs;
-		array<int> JSFuncArgs;
 
 		tmp_fn.MakeLower();
 		if (tmp_fn.find(YOUTUBE_URL2) >= 0 || tmp_fn.find(YOUTUBE_URL3) >= 0 || tmp_fn.find(YOUTUBE_URL4) >= 0 || tmp_fn.find(YOUTUBE_URL5) >= 0 || tmp_fn.find(YOUTUBE_URL6) >= 0) fn = RepleaceYouTubeUrl(fn);
@@ -1185,7 +1308,7 @@ string PlayitemParse(const string &in path, dictionary &MetaData, array<dictiona
 		string WebData;
 		string JSData;
 
-		linkWeb += "&gl=US&hl=en&has_verified=1&bpctr=9999999999";
+		linkWeb += "&has_verified=1&bpctr=9999999999";
 		WebData = HostUrlGetString(linkWeb, GetUserAgent());
 		if (ytcfg.empty()) ytcfg = ParseYTCFG(WebData);
 
@@ -1220,16 +1343,16 @@ string PlayitemParse(const string &in path, dictionary &MetaData, array<dictiona
 				}
 				if (jsUrl.find("://") < 0) jsUrl = "https://www.youtube.com" + jsUrl;
 			}
-			if (jsUrl.empty()) jsUrl = "https://www.youtube.com/yts/jsbin/player-ko_KR-vflHE7FfV/base.js";
+			if (jsUrl.empty()) jsUrl = "https://www.youtube.com/yts/jsbin/player_ias-vfly7X4ko/ko_KR/base.js";
 
 			JSData = HostUrlGetString(jsUrl, GetUserAgent());
 		}
 
 		string error_message;
-		string player_response_jsonData, player_chapter_jsonData;
+		string player_response_jsonData;
 		for (int i = 0; i < 2; i++)
 		{
-			string json = HostUrlDecode(GetVideoJson(videoId, ytcfg, i == 1));
+			string json = GetVideoJson(videoId, ytcfg, i == 1);
 
 			if (!json.empty())
 			{
@@ -1271,52 +1394,19 @@ string PlayitemParse(const string &in path, dictionary &MetaData, array<dictiona
 			}
 			if (!player_response_jsonData.empty()) break;
 		}
-		if (player_response_jsonData.empty())
-		{
-			player_response_jsonData = GetJsonCode(WebData, MATCH_PLAYER_RESPONSE);
-			player_response_jsonData.replace("\\/", "/");
-			player_response_jsonData.replace("\\\"", "\"");
-			player_response_jsonData.replace("\\\\", "\\");
-		}
-		if (player_response_jsonData.empty()) player_response_jsonData = GetJsonCode(WebData, MATCH_PLAYER_RESPONSE_2);
+		if (player_response_jsonData.empty()) player_response_jsonData = GetJsonCode(WebData, MATCH_PLAYER_RESPONSE);
 
-		player_chapter_jsonData = GetJsonCode(WebData, MATCH_CHAPTER_RESPONSE);
+		string player_chapter_jsonData = GetJsonCode(WebData, MATCH_CHAPTER_RESPONSE);
 		if (player_chapter_jsonData.empty()) player_chapter_jsonData = GetJsonCode(WebData, MATCH_CHAPTER_RESPONSE2);
 		player_chapter_jsonData.replace("\\/", "/");
 		// player_chapter_jsonData.replace("\\\"", "\"");
 		player_chapter_jsonData.replace("\\\\", "\\");
-
-		int stream_map_start = -1;
-		int stream_map_len = 0;
-
-		int adaptive_fmts_start = -1;
-		int adaptive_fmts_len = 0;
 
 		int hlsmpd_start = -1;
 		int hlsmpd_len = 0;
 
 		int dashmpd_start = -1;
 		int dashmpd_len = 0;
-
-		// url_encoded_fmt_stream_map
-		if (stream_map_start <= 0 && (stream_map_start = WebData.find(MATCH_STREAM_MAP_START)) >= 0)
-		{
-			stream_map_start += MATCH_STREAM_MAP_START.size() + 2;
-			stream_map_len = WebData.find(MATCH_END, stream_map_start + 10);
-			if (stream_map_len > 0) stream_map_len += 10;
-			else stream_map_len = WebData.size();
-			stream_map_len -= stream_map_start;
-		}
-
-		// adaptive_fmts
-		if (adaptive_fmts_start <= 0 && (adaptive_fmts_start = WebData.find(MATCH_ADAPTIVE_FMTS_START)) >= 0)
-		{
-			adaptive_fmts_start += MATCH_ADAPTIVE_FMTS_START.size() + 2;
-			adaptive_fmts_len = WebData.find(MATCH_END, adaptive_fmts_start + 10);
-			if (adaptive_fmts_len > 0) adaptive_fmts_len += 10;
-			else adaptive_fmts_len = WebData.size();
-			adaptive_fmts_len -= adaptive_fmts_start;
-		}
 
 		// dash mainfest mpd
 		if (dashmpd_start <= 0 && (dashmpd_start = WebData.find(MATCH_DASHMPD_START)) >= 0)
@@ -1338,7 +1428,7 @@ string PlayitemParse(const string &in path, dictionary &MetaData, array<dictiona
 			hlsmpd_len -= hlsmpd_start;
 		}
 
-		if (player_response_jsonData.empty() && stream_map_len <= 0 && hlsmpd_len <= 0) return "";
+		if (player_response_jsonData.empty() && hlsmpd_len <= 0 && dashmpd_len <= 0) return "";
 
 		if (@MetaData !is null)
 		{
@@ -1388,8 +1478,8 @@ string PlayitemParse(const string &in path, dictionary &MetaData, array<dictiona
 			if (title.find("360°") >= 0 || title.find("360VR") >= 0) MetaData["is360"] = 1;
 		}
 
-		string final_url, final_url2;
-		string final_ext;
+		string finalUrl, finalUrl2;
+		string finalExt;
 		JsonReader reader;
 		JsonValue root;
 		bool okJson = !player_response_jsonData.empty() && reader.parse(player_response_jsonData, root) && root.isObject();
@@ -1414,44 +1504,54 @@ string PlayitemParse(const string &in path, dictionary &MetaData, array<dictiona
 			}
 		}
 
-		bool isDash = adaptive_fmts_start <= 0 && (dashmpd_len > 0 && hlsmpd_len > 0); // 일단 live만 mpd 지원되게 하자...
-		if (isDash || hlsmpd_len > 0)
+		bool isLiveUrl = false;
+		string liveUrl;
+		if (okJson)
 		{
-			string url;
+			JsonValue videoDetails = root["videoDetails"];
+			if (videoDetails.isObject())
+			{
+				JsonValue isLive = videoDetails["isLive"];
 
-			if (okJson)
+				isLiveUrl = isLive.isBool() && isLive.asBool();
+			}
+			if (isLiveUrl)
 			{
 				JsonValue streamingData = root["streamingData"];
 				if (streamingData.isObject())
 				{
-					JsonValue ManifestUrl = streamingData[isDash ? "dashManifestUrl" : "hlsManifestUrl"];
-					if (ManifestUrl.isString()) url = ManifestUrl.asString();
+					JsonValue ManifestUrl = streamingData["dashManifestUrl"];
+					if (ManifestUrl.isString()) liveUrl = ManifestUrl.asString();
+					else
+					{
+						ManifestUrl = streamingData["hlsManifestUrl"];
+						if (ManifestUrl.isString()) liveUrl = ManifestUrl.asString();
+					}
 				}
 			}
-			if (url.empty())
-			{
-				if (isDash) url = WebData.substr(dashmpd_start, dashmpd_len);
-				else url = WebData.substr(hlsmpd_start, hlsmpd_len);
-			}
-
-			url = HostUrlDecode(HostUrlDecode(url));
-			url.replace("\\/", "/");
-			url = CorrectURL(url);
-			if (url.find("/s/") > 0)
-			{
-				string tmp = url;
-				string signature = HostRegExpParse(tmp, "/s/([0-9A-Z]+.[0-9A-Z]+)");
-
-				if (!signature.empty()) url = SignatureDecode(tmp, signature, "/signature/", WebData, JSData, JSFuncs, JSFuncArgs);
-			}
-			url += "?ForceBHD";
-			final_url = url;
-			final_ext = "mp4";
-			if (@MetaData !is null) MetaData["chatUrl"] = "https://www.youtube.com/live_chat?v=" + videoId + "&is_popout=1";
 		}
-		else
+		if (isLiveUrl && liveUrl.empty())
 		{
-			int final_itag = 0;
+			if (dashmpd_len > 0) liveUrl = WebData.substr(dashmpd_start, dashmpd_len);
+			else if (hlsmpd_len > 0) liveUrl = WebData.substr(hlsmpd_start, hlsmpd_len);
+		}
+		if (!liveUrl.empty())
+		{
+			liveUrl = HostUrlDecode(liveUrl);
+			liveUrl.replace("\\/", "/");
+			liveUrl = CorrectURL(liveUrl);
+			liveUrl = HostDecodeSigUrl(liveUrl, "", JSData);
+			if (!liveUrl.empty())
+			{
+				liveUrl += "?ForceBHD";
+				finalUrl = liveUrl;
+				finalExt = "mp4";
+				if (isLiveUrl && @MetaData !is null) MetaData["chatUrl"] = "https://www.youtube.com/live_chat?v=" + videoId + "&is_popout=1";
+			}
+		}
+		if (liveUrl.empty())
+		{
+			int finalItag = 0;
 			bool IsOK = false;
 
 			if (okJson)
@@ -1459,317 +1559,165 @@ string PlayitemParse(const string &in path, dictionary &MetaData, array<dictiona
 				JsonValue streamingData = root["streamingData"];
 				if (streamingData.isObject())
 				{
-					JsonValue hlsManifestUrl = streamingData["hlsManifestUrl"];
-					if (false && hlsManifestUrl.isString()) // for hls vod.. currently not use
+					for (int i = 0; i < 2; i++)
 					{
-						string url = HostUrlDecode(hlsManifestUrl.asString());
-
-						url.replace("\\/", "/");
-						url = CorrectURL(url);
-						if (url.find("/s/") > 0)
+						JsonValue formats = streamingData[i == 0 ? "formats" : "adaptiveFormats"];
+						if (formats.isArray())
 						{
-							string tmp = url;
-							string signature = HostRegExpParse(tmp, "/s/([0-9A-Z]+.[0-9A-Z]+)");
-
-							if (!signature.empty()) url = SignatureDecode(tmp, signature, "/signature/", WebData, JSData, JSFuncs, JSFuncArgs);
-						}
-						url += "?ForceBHD";
-						final_url = url;
-						final_ext = "mp4";
-					}
-					else
-					{
-						for (int i = 0; i < 2; i++)
-						{
-							JsonValue formats = streamingData[i == 0 ? "formats" : "adaptiveFormats"];
-							if (formats.isArray())
+							for(int j = 0, len = formats.size(); j < len; j++)
 							{
-								for(int j = 0, len = formats.size(); j < len; j++)
+								JsonValue format = formats[j];
+
+								if (format.isObject())
 								{
-									JsonValue format = formats[j];
-
-									if (format.isObject())
+									if (i == 1)
 									{
-										if (i == 1)
-										{
-											JsonValue type = format["type"];
+										JsonValue type = format["type"];
 
-											// fragmented url
-											if (type.isString() && type.asString() == "FORMAT_STREAM_TYPE_OTF") continue;
+										// fragmented url
+										if (type.isString() && type.asString() == "FORMAT_STREAM_TYPE_OTF") continue;
+									}
+
+									QualityListItem item;
+									JsonValue itag = format["itag"];
+									JsonValue url = format["url"];
+									JsonValue bitrate = format["bitrate"];
+									JsonValue width = format["width"];
+									JsonValue height = format["height"];
+									JsonValue quality = format["quality"];
+									JsonValue qualityLabel = format["qualityLabel"];
+									JsonValue projectionType = format["projectionType"];
+									JsonValue mimeType = format["mimeType"];
+									JsonValue fps = format["fps"];
+									JsonValue cipher = format["cipher"];
+									JsonValue signatureCipher = format["signatureCipher"];
+									JsonValue audioTrack = format["audioTrack"];
+								
+									if (itag.isInt()) item.itag = itag.asInt();
+									if (width.isInt() && height.isInt()) item.resolution = formatInt(width.asInt()) + "x" + formatInt(height.asInt());
+									if (bitrate.isInt())
+									{
+										item.bitrate = GetBitrateString(bitrate.asInt());
+										item.bitrateVal = bitrate.asInt();
+									}
+									if (quality.isString()) item.quality = quality.asString();
+									if (qualityLabel.isString()) item.qualityDetail = qualityLabel.asString();
+									if (mimeType.isString()) item.format = GetCodecName(HostUrlDecode(mimeType.asString()));
+									if (fps.isDouble())
+									{
+										double val = fps.asDouble();
+
+										if (val > 0) item.fps = val;
+									}
+									if (projectionType.isString())
+									{
+										int type = parseInt(projectionType.asString());
+
+										if (type == 2)
+										{
+											MetaData["type3D"] = 0;
+											MetaData["is360"] = 1; // 360 VR
 										}
-
-										QualityListItem item;
-										JsonValue itag = format["itag"];
-										JsonValue url = format["url"];
-										JsonValue bitrate = format["bitrate"];
-										JsonValue width = format["width"];
-										JsonValue height = format["height"];
-										JsonValue quality = format["quality"];
-										JsonValue qualityLabel = format["qualityLabel"];
-										JsonValue projectionType = format["projectionType"];
-										JsonValue mimeType = format["mimeType"];
-										JsonValue fps = format["fps"];
-										JsonValue cipher = format["cipher"];
-										JsonValue signatureCipher = format["signatureCipher"];
-										JsonValue audioTrack = format["audioTrack"];
-									
-										if (itag.isInt()) item.itag = itag.asInt();
-										if (width.isInt() && height.isInt()) item.resolution = formatInt(width.asInt()) + "x" + formatInt(height.asInt());
-										if (bitrate.isInt())
+										else if (type == 3)
 										{
-											item.bitrate = GetBitrateString(bitrate.asInt());
-											item.bitrateVal = bitrate.asInt();
+											MetaData["type3D"] = 3; 	// T&B Half
+											MetaData["is360"] = 1; // 360 VR
 										}
-										if (quality.isString()) item.quality = quality.asString();
-										if (qualityLabel.isString()) item.qualityDetail = qualityLabel.asString();
-										if (mimeType.isString()) item.format = GetCodecName(HostUrlDecode(mimeType.asString()));
-										if (fps.isDouble())
+										else if (type == 4)
 										{
-											double val = fps.asDouble();
-
-											if (val > 0) item.fps = val;
 										}
-										if (projectionType.isString())
+										int type3D;
+										if (MetaData.get("type3D", type3D)) item.type3D = type3D;
+
+										int is360;
+										if (MetaData.get("is360", is360)) item.is360 = is360 == 1;
+									}
+									if (audioTrack.isObject())
+									{
+										JsonValue displayName = audioTrack["displayName"];
+										if (displayName.isString()) item.audioName = displayName.asString();
+
+										JsonValue id = audioTrack["id"];
+										if (id.isString())
 										{
-											int type = parseInt(quality.asString());
-
-											if (type == 2)
+											item.audioCode = id.asString();
+											int p = item.audioCode.find(".");
+											if (p > 0)
 											{
-												MetaData["type3D"] = 0;
-												MetaData["is360"] = 1; // 360 VR
-											}
-											else if (type == 3)
-											{
-												MetaData["type3D"] = 3; 	// T&B Half
-												MetaData["is360"] = 1; // 360 VR
-											}
-											else if (type == 4)
-											{
-											}
-											int type3D;
-											if (MetaData.get("type3D", type3D)) item.type3D = type3D;
+												item.audioCode = item.audioCode.Left(p);
 
-											int is360;
-											if (MetaData.get("is360", is360)) item.is360 = is360 == 1;
-										}
-										if (audioTrack.isObject())
-										{
-											JsonValue displayName = audioTrack["displayName"];
-											if (displayName.isString()) item.audioName = displayName.asString();
-
-											JsonValue id = audioTrack["id"];
-											if (id.isString())
-											{
-												item.audioCode = id.asString();
-												int p = item.audioCode.find(".");
-												if (p > 0)
-												{
-													item.audioCode = item.audioCode.Left(p);
-
-													JsonValue audioIsDefault = audioTrack["audioIsDefault"];
-													item.audioIsDefault = audioIsDefault.isBool() && audioIsDefault.asBool();
-												}
+												JsonValue audioIsDefault = audioTrack["audioIsDefault"];
+												item.audioIsDefault = audioIsDefault.isBool() && audioIsDefault.asBool();
 											}
 										}
-										if (url.isString())
-										{
-											item.url = url.asString();
-											if (item.url.find("xtags=drc") > 0) continue;
-										}
-										else if (cipher.isString() || signatureCipher.isString())
-										{
-											string u, signature, sigName = "signature";
-											string str = cipher.isString() ? cipher.asString() : signatureCipher.isString() ? signatureCipher.asString() : "";
+									}
+									string resolvedUrl;
+									string cipherText;
+									if (url.isString()) resolvedUrl = url.asString();
+									else if (cipher.isString() || signatureCipher.isString())
+									{
+										cipherText = signatureCipher.isString() ? signatureCipher.asString() : cipher.isString() ? cipher.asString() : "";
+									}
+									resolvedUrl = HostDecodeSigUrl(resolvedUrl, cipherText, JSData);
+									if (resolvedUrl.empty()) continue;
+									item.url = resolvedUrl;
+									if (item.url.find("xtags=drc") > 0) continue;
 
-											str.replace("\\u0026", "&");
-											array<string> params = str.split("&");
-											for (int i = 0, len = params.size(); i < len; i++)
-											{
-												string param = params[i];
-												int k = param.find("=");
+									if (item.itag != 0 && !item.url.empty())
+									{
+										if (videoId == "jj9RZODDDZs" && item.url.find("clen=") < 0) continue; // 특수한 경우 ㄷㄷㄷ
+										if (item.url.find("dur=0.000") > 0) continue;
 
-												if (k > 0)
-												{
-													string paramHeader = param.Left(k);
-													string paramValue = param.substr(k + 1);
-
-													if (paramHeader == "url") u = HostUrlDecode(paramValue);
-													else if (paramHeader == "s") signature = HostUrlDecode(paramValue);
-													else if (paramHeader == "sp") sigName = paramValue;
-													else if (!u.empty()) u = u + "&" + paramHeader + "=" + HostUrlDecode(paramValue);
-												}
-												else if (!u.empty()) u = u + "&" + param;
-											}
-											if (!u.empty() && !signature.empty() && !JSData.empty())
-											{
-												string param = "&" + sigName + "=";
-
-												u = SignatureDecode(u, signature, param, WebData, JSData, JSFuncs, JSFuncArgs);
-											}
-											item.url = u;
-										}
-										item.url.replace("\\u0026", "&");
-
-										if (item.itag != 0 && !item.url.empty())
-										{
-											if (videoId == "jj9RZODDDZs" && item.url.find("clen=") < 0) continue; // 특수한 경우 ㄷㄷㄷ
-											if (item.url.find("dur=0.000") > 0) continue;
-
-											if (item.url.find("xtags=vproj=mesh") > 0) MetaData["is360"] = 1;
-											item.isHDR = IsHDR(item.itag);
-											if (@QualityList !is null) AppendQualityList(QualityList, item, "");
-											if (SelectBestProfile(final_itag, final_ext, item.itag, youtubeSets)) final_url = item.url;
-											if (SelectBestProfile2(final_itag, final_ext, item.itag, youtubeSets)) final_url2 = item.url;
-											IsOK = true;
-										}
+										if (item.url.find("xtags=vproj=mesh") > 0) MetaData["is360"] = 1;
+										item.isHDR = IsHDR(item.itag);
+										if (@QualityList !is null) AppendQualityList(QualityList, item, "");
+										if (SelectBestProfile(finalItag, finalExt, item.itag, youtubeSets)) finalUrl = item.url;
+										if (SelectBestProfile2(finalItag, finalExt, item.itag, youtubeSets)) finalUrl2 = item.url;
+										IsOK = true;
 									}
 								}
 							}
 						}
 					}
-				}
-			}
-
-			if (!IsOK)
-			{
-				string str;
-				if (stream_map_len > 0) str = WebData.substr(stream_map_start, stream_map_len);
-				if (adaptive_fmts_len > 0)
-				{
-					if (!str.empty()) str = str + ",";
-					str += WebData.substr(adaptive_fmts_start, adaptive_fmts_len);
-				}
-				str.replace("\\u0026", "&");
-
-				array<string> lines = str.split(",");
-				for (int i = 0, len = lines.size(); i < len; i++)
-				{
-					string line = lines[i];
-
-					line.Trim(":");
-					line.Trim("\"");
-					line.Trim("\'");
-					line.Trim(",");
-
-					int itag = 0;
-					string url, signature, sig, sigName = "signature";
-					QualityListItem item;
-
-					array<string> params = line.split("&");
-					for (int j = 0, len = params.size(); j < len; j++)
+					if (!isLiveUrl && !IsOK)
 					{
-						string param = params[j];
-						int k = param.find("=");
+						string url;
+						JsonValue ManifestUrl = streamingData["dashManifestUrl"];
 
-						if (k > 0)
+						if (ManifestUrl.isString()) url = ManifestUrl.asString();
+						else
 						{
-							string paramHeader = param.Left(k);
-							string paramValue = param.substr(k + 1);
-
-							// "quality", "fallback_host", "url", "itag", "type"
-							if (paramHeader == "url")
+							ManifestUrl = streamingData["hlsManifestUrl"];
+							if (ManifestUrl.isString()) url = ManifestUrl.asString();
+						}
+						if (url.empty())
+						{
+							if (dashmpd_len > 0) url = WebData.substr(dashmpd_start, dashmpd_len);
+							else if (hlsmpd_len > 0) url = WebData.substr(hlsmpd_start, hlsmpd_len);
+						}
+						if (!url.empty())
+						{
+							url = HostUrlDecode(url);
+							url.replace("\\/", "/");
+							url = CorrectURL(url);
+							url = HostDecodeSigUrl(url, "", JSData);
+							if (!url.empty())
 							{
-								url = HostUrlDecode(HostUrlDecode(paramValue));
-								url.replace("http://", "https://");
-							}
-							else if (paramHeader == "itag")
-							{
-								itag = parseInt(paramValue);
-								item.itag = itag;
-							}
-							else if (paramHeader == "sig")
-							{
-								sig = HostUrlDecode(HostUrlDecode(paramValue));
-								sig.Trim();
-								signature = "";
-							}
-							else if (paramHeader == "s")
-							{
-								signature = HostUrlDecode(HostUrlDecode(paramValue));
-								signature.Trim();
-								sig = "";
-							}
-							else if (paramHeader == "sp")
-							{
-								sigName = HostUrlDecode(paramValue);
-								sigName.Trim();
-							}
-							else if (paramHeader == "quality")
-							{
-								item.quality = paramValue;
-							}
-							else if (paramHeader == "size")
-							{
-								item.resolution = paramValue;
-							}
-							else if (paramHeader == "bitrate")
-							{
-								int64 bit = parseInt(paramValue);
-
-								item.bitrate = GetBitrateString(bit);
-								item.bitrateVal = bit;
-							}
-							else if (paramHeader == "projection_type")
-							{
-								int type = parseInt(paramValue);
-
-								if (type == 2)
-								{
-									MetaData["type3D"] = 0;
-									MetaData["is360"] = 1; // 360 VR
-								}
-								else if (type == 3)
-								{
-									MetaData["type3D"] = 3; 	// T&B Half
-									MetaData["is360"] = 1; // 360 VR
-								}
-								else if (type == 4)
-								{
-								}
-								int type3D;
-								if (MetaData.get("type3D", type3D)) item.type3D = type3D;
-
-								int is360;
-								if (MetaData.get("is360", is360)) item.is360 = is360 == 1;
-							}
-							else if (paramHeader == "type")
-							{
-								item.format = GetCodecName(HostUrlDecode(paramValue));
-							}
-							else if (paramHeader == "fps")
-							{
-								double fps = parseFloat(paramValue);
-
-								if (fps > 0) item.fps = fps;
+								url += "?ForceBHD";
+								finalUrl = url;
+								finalExt = "mp4";
+								IsOK = true;
 							}
 						}
-					}
-					if (videoId == "jj9RZODDDZs" && url.find("clen=") < 0) continue; // 특수한 경우 ㄷㄷㄷ
-					if (url.find("dur=0.000") > 0) continue;
-
-					if (!sig.empty()) url = url + "&signature=" + sig;
-					else if (!signature.empty() && !JSData.empty())
-					{
-						string param = "&" + sigName + "=";
-
-						url = SignatureDecode(url, signature, param, WebData, JSData, JSFuncs, JSFuncArgs);
-					}
-					if (itag > 0)
-					{
-						if (url.find("xtags=vproj=mesh") > 0) MetaData["is360"] = 1;
-						item.isHDR = IsHDR(item.itag);
-						if (@QualityList !is null) AppendQualityList(QualityList, item, url);
-						if (SelectBestProfile(final_itag, final_ext, itag, youtubeSets)) final_url = url;
-						if (SelectBestProfile2(final_itag, final_ext, itag, youtubeSets)) final_url2 = url;
 					}
 				}
 			}
 		}
 
-		if (final_url.empty()) final_url = final_url2;
-		if (!final_url.empty())
+		if (finalUrl.empty()) finalUrl = finalUrl2;
+		if (!finalUrl.empty())
 		{
-			final_url.replace("http://", "https://");
+			finalUrl.replace("http://", "https://");
 			if (!videoId.empty() && (@MetaData !is null))
 			{
 				bool ParseMeta = false;
@@ -1857,7 +1805,7 @@ string PlayitemParse(const string &in path, dictionary &MetaData, array<dictiona
 					JsonValue microformat = root["microformat"];
 					if (!microformat.isObject())
 					{
-						string temp = GetJsonCode(WebData, MATCH_PLAYER_RESPONSE_2);
+						string temp = GetJsonCode(WebData, MATCH_PLAYER_RESPONSE);
 						JsonReader reader;
 						JsonValue root;
 
@@ -2111,6 +2059,7 @@ string PlayitemParse(const string &in path, dictionary &MetaData, array<dictiona
 									item["url"] = s5;
 									subtitle.insertLast(item);
 								}
+								// track = track.NextSiblingElement("track");
 								track = track.NextSiblingElement();
 							}
 						}
@@ -2165,8 +2114,8 @@ string PlayitemParse(const string &in path, dictionary &MetaData, array<dictiona
 				}
 			}
 
-			if (@MetaData !is null) MetaData["fileExt"] = final_ext;
-			return final_url;
+			if (@MetaData !is null) MetaData["fileExt"] = finalExt;
+			return finalUrl;
 		}
 	}
 	return "";
@@ -2432,86 +2381,6 @@ string ParserPlaylistItem(string html, int start, int len, string vid, array<dic
 	return data_video_id;
 }
 
-string ParserPlaylistItem(JsonValue object, array<dictionary> &pls, string vid)
-{
-	JsonValue videoId = object["videoId"];
-	string lastvideoId;
-
-	if (videoId.isString())
-	{
-		string url = "https://www.youtube.com/watch?v=" + videoId.asString();
-		if (IsArrayExist(pls, url)) return lastvideoId;
-
-		JsonValue title = object["title"];
-		if (title.isObject())
-		{
-			JsonValue simpleText = title["simpleText"];
-
-			if (!simpleText.isString())
-			{
-				JsonValue runs = title["runs"];
-
-				if (runs.isObject())
-				{
-					JsonValue zero = runs["0"];
-
-					if (zero.isObject()) simpleText = zero["text"];
-				}
-				else if (runs.isArray())
-				{
-					JsonValue zero = runs[0];
-
-					if (zero.isObject()) simpleText = zero["text"];
-				}
-			}
-			if (simpleText.isString())
-			{
-				string duration;
-				JsonValue lengthSeconds = object["lengthSeconds"];
-				JsonValue lengthText = object["lengthText"];
-
-				if (lengthSeconds.isUInt()) duration = lengthSeconds.asString();
-				else if (lengthText.isObject())
-				{
-					JsonValue simpleText = lengthText["simpleText"];
-
-					if (simpleText.isString()) duration = simpleText.asString();
-				}
-
-				string thumb;
-				JsonValue thumbnail = object["thumbnail"];
-				if (thumbnail.isObject())
-				{
-					JsonValue thumbnails = thumbnail["thumbnails"];
-
-					if (thumbnails.isArray())
-					{
-						JsonValue th = thumbnails[0];
-
-						if (th.isObject())
-						{
-							JsonValue url = th["url"];
-
-							if (url.isString()) thumb = url.asString();
-						}
-					}
-				}
-
-				lastvideoId = videoId.asString();
-
-				dictionary item;
-				item["url"] = url;
-				item["title"] = simpleText.asString();
-				item["duration"] = duration;
-				if (!thumb.empty()) item["thumbnail"] = thumb;
-				if (lastvideoId == vid) item["current"] = "1";
-				pls.insertLast(item);
-			}
-		}
-	}
-	return lastvideoId;
-}
-
 JsonValue GetJsonPath(JsonValue object, string path)
 {
 	JsonValue ret;
@@ -2543,6 +2412,75 @@ JsonValue GetJsonPath(JsonValue object, string path)
 		}
 	}
 	return ret;
+}
+
+string ParserPlaylistItem(JsonValue object, array<dictionary> &pls, string vid)
+{
+	JsonValue contentId = object["contentId"];
+	string lastvideoId;
+
+	if (contentId.isString())
+	{
+		string url = "https://www.youtube.com/watch?v=" + contentId.asString();
+		if (IsArrayExist(pls, url)) return lastvideoId;
+
+		JsonValue content = GetJsonPath(object, "/metadata/lockupMetadataViewModel/title/content");
+		if (content.isString())
+		{
+			string duration;
+			JsonValue durationText = GetJsonPath(object, "/contentImage/thumbnailViewModel/overlays/0/thumbnailBottomOverlayViewModel/badges/0/thumbnailBadgeViewModel/text");
+			if (durationText.isString()) duration = durationText.asString();
+		
+			string thumb;
+			JsonValue thumbnail = GetJsonPath(object, "/contentImage/thumbnailViewModel/image/sources/0/url");
+			if (thumbnail.isString()) thumb = thumbnail.asString();
+	
+			lastvideoId = contentId.asString();
+
+			dictionary item;
+			item["url"] = url;
+			item["title"] = content.asString();
+			item["duration"] = duration;
+			if (!thumb.empty()) item["thumbnail"] = thumb;
+			if (lastvideoId == vid) item["current"] = "1";
+			pls.insertLast(item);
+		}
+	}
+	else
+	{
+		JsonValue videoId = object["videoId"];
+
+		if (videoId.isString())
+		{
+			string url = "https://www.youtube.com/watch?v=" + videoId.asString();
+			if (IsArrayExist(pls, url)) return lastvideoId;
+
+			JsonValue title = GetJsonPath(object, "/title/simpleText");
+			if (!title.isString()) title = GetJsonPath(object, "/title/runs/0/text");
+			if (title.isString())
+			{
+				JsonValue simpleText = GetJsonPath(object, "/lengthText/simpleText");
+				string duration;
+
+				if (simpleText.isString()) duration = simpleText.asString();
+
+				string thumb;
+				JsonValue thumbnail = GetJsonPath(object, "/thumbnail/thumbnails/0/url");
+				if (thumbnail.isString()) thumb = thumbnail.asString();
+
+				lastvideoId = videoId.asString();
+
+				dictionary item;
+				item["url"] = url;
+				item["title"] = title.asString();
+				item["duration"] = duration;
+				if (!thumb.empty()) item["thumbnail"] = thumb;
+				if (lastvideoId == vid) item["current"] = "1";
+				pls.insertLast(item);
+			}
+		}
+	}
+	return lastvideoId;
 }
 
 
@@ -2606,22 +2544,44 @@ array<dictionary> PlaylistParse(const string &in path)
 				jsonEntry += "}";
 				if (reader.parse(jsonEntry, root) && root.isObject())
 				{
-					JsonValue contents = GetJsonPath(root, "contents/twoColumnBrowseResultsRenderer/tabs/0/tabRenderer/content/sectionListRenderer/contents/0/itemSectionRenderer/contents/0/playlistVideoListRenderer/contents");
-					if (!contents.isArray()) contents = GetJsonPath(root, "contents/twoColumnWatchNextResults/playlist/playlist/contents");
+					JsonValue contents = GetJsonPath(root, "/contents/twoColumnBrowseResultsRenderer/tabs/0/tabRenderer/content/sectionListRenderer/contents/0/itemSectionRenderer/contents");
 
+					if (!contents.isArray()) contents = GetJsonPath(root, "/contents/twoColumnWatchNextResults/playlist/playlist/contents");
 					if (contents.isArray())
 					{
-						for(int j = 0, len = contents.size(); j < len; j++)
+						for (int j = 0, len = contents.size(); j < len; j++)
 						{
 							JsonValue content = contents[j];
 
 							if (content.isObject())
 							{
-								JsonValue playlistPanelVideoRenderer = content["playlistPanelVideoRenderer"];
-								JsonValue playlistVideoRenderer = content["playlistVideoRenderer"];
+								JsonValue lockupViewModel = content["lockupViewModel"];
 
-								if (playlistPanelVideoRenderer.isObject()) lastvideoId = ParserPlaylistItem(playlistPanelVideoRenderer, ret, vid);
-								else if (playlistVideoRenderer.isObject()) lastvideoId = ParserPlaylistItem(playlistVideoRenderer, ret, vid);
+								if (lockupViewModel.isObject()) lastvideoId = ParserPlaylistItem(lockupViewModel, ret, vid);
+								else
+								{
+									JsonValue playlistPanelVideoRenderer = content["playlistPanelVideoRenderer"];
+									if (playlistPanelVideoRenderer.isObject()) lastvideoId = ParserPlaylistItem(playlistPanelVideoRenderer, ret, vid);
+									else
+									{
+										JsonValue contents2 = GetJsonPath(content, "/playlistVideoListRenderer/contents");
+
+										if (contents2.isArray())
+										{
+											for (int k = 0, len = contents2.size(); k < len; k++)
+											{
+												JsonValue content2 = contents2[k];
+												if (content2.isObject())
+												{
+													JsonValue playlistVideoRenderer = content2["playlistVideoRenderer"];
+
+													if (playlistVideoRenderer.isObject()) lastvideoId = ParserPlaylistItem(playlistVideoRenderer, ret, vid);
+												}
+											}
+										}
+									}
+								
+								}
 								HostIncTimeOut(5000);
 							}
 						}

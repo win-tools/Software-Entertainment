@@ -1,4 +1,4 @@
-﻿/*
+/*
 	subtitle search by opensubtitle
 */
 
@@ -14,6 +14,8 @@
 // string ServerCheck(string User, string Pass) 									-> server check
 // string ServerLogin(string User, string Pass) 									-> login
 // void ServerLogout() 																-> logout
+// string GetWebAccountUrl()							-> login process by WebBrowser
+// string GetWebAccountDomain()							-> transport cookie domain for login
 //------------------------------------------------------------------------------------------------
 // string GetLanguages()															-> get support language
 // string SubtitleWebSearch(string MovieFileName, dictionary MovieMetaData)			-> search subtitle bu web browser
@@ -48,7 +50,238 @@ uint64 GetHash(string FileName, int64 &out size)
 }
 
 string Token = "";
-string ApiHost = "https://api.opensubtitles.com/";
+string ISDB_URL = "http://www.opensubtitles.org/isdb/";
+string RPC_URL = "http://api.opensubtitles.org/xml-rpc";
+
+array<dictionary> OldSubtitleSearch(string MovieFileName, dictionary MovieMetaData)
+{
+	array<dictionary> ret;
+	string url = ISDB_URL + "index.php?player=mpc&";
+	int64 size = 0;
+	uint64 hash = GetHash(MovieFileName, size);
+	string title = string(MovieMetaData["title"]);
+	string param = "name[0]=" + HostUrlEncode(title) + "&hash[0]=" + formatUInt(hash, "0h", 16) + "&size[0]=" + formatUInt(size, "0h", 16);
+	
+	url = url + param;
+	string text = HostUrlGetString(url, "MPC-HC");
+	if (!text.empty())
+	{
+		string ticket = "";
+		string movie = "";
+		string subtitle = "";
+		string name = "";
+		string language = "";
+		string iso639_2 = "";
+		string format = "";
+		string discs = "";
+		string disc_no = "";
+		string nick = "";
+		string email = "";
+		array<string> lines = text.split("\n");
+		
+		for (int i = 0, len = lines.size(); i < len; i++)
+		{
+			string line = lines[i];
+			
+			if (!line.empty())
+			{
+				int s = line.find("=");
+				
+				if (s > 0)
+				{
+					string key = line.substr(0, s);
+					string value = line.substr(s + 1);
+				
+					if (key == "ticket") ticket = value;
+					else if (key == "movie")
+					{
+						array<string> movies = value.split("|");
+						
+						for (int j = 0, len = movies.size(); j < len; j++)
+						{
+							string m = movies[j];
+							
+							if (!m.empty())
+							{
+								if (movie.empty()) movie = m;
+								else movie = movie + " ," + m;
+							}
+						}
+					}
+					else if (key == "subtitle") subtitle = value;
+					else if (key == "name") name = value;
+					else if (key == "discs") discs = value;
+					else if (key == "disc_no") disc_no = value;
+					else if (key == "format") format = value;
+					else if (key == "iso639_2") iso639_2 = value;
+					else if (key == "language") language = value;
+					else if (key == "nick") nick = value;
+					else if (key == "email") email = value;
+				}
+				
+				bool IsAdd = false;
+				if (line == "endsubtitle") IsAdd = true;
+				else if (line == "endmovie") IsAdd = true;
+				else if (line == "end")
+				{
+					IsAdd = true;
+					break;
+				}
+				if (IsAdd && !subtitle.empty() && !movie.empty())
+				{
+					dictionary item;					
+					string id = "id=" + subtitle + "&ticket=";
+				
+//					id = id + ticket;
+					item["id"] = id;
+					item["title"] = movie;
+					if (!name.empty()) item["fileName"] = name;
+					if (!format.empty()) item["format"] = format;
+					if (!language.empty()) item["language"] = language;
+					if (!iso639_2.empty()) item["lang"] = iso639_2;
+					if (!discs.empty() && !disc_no.empty()) item["disc"] = disc_no + "/" + discs;
+					if (!nick.empty()) item["nick"] = nick;
+					if (!email.empty()) item["email"] = email;
+								
+					subtitle = "";
+					name = "";
+					language = "";
+					iso639_2 = "";
+					disc_no = "";
+					discs = "";
+					nick = "";
+					email = "";
+					
+					ret.insertLast(item);
+				}
+			}
+		}
+	}
+	
+	return ret;
+}
+
+string OldSubtitleDownload(string id)
+{
+	string url = ISDB_URL + "dl.php?" + id;
+	string text = HostUrlGetString(url, "MPC-HC");
+	
+	return text;
+}
+
+array<dictionary> NewSubtitleSearch(string MovieFileName, dictionary MovieMetaData)
+{
+	array<dictionary> ret;
+	int64 size = 0;
+	uint64 hash = GetHash(MovieFileName, size);
+	string title = string(MovieMetaData["title"]);
+	XmlRpcClient xmlrpc(RPC_URL);
+	XmlRpcValue args, res;
+	
+	args[0] = Token;
+	args[1][0]["sublanguageid"] = "all";
+	if (hash > 0) args[1][0]["moviehash"] = formatUInt(hash, "0h", 16);
+	if (size > 0) args[1][0]["moviebytesize"] = formatInt(size);
+	if (hash <= 0 && size <= 0 && !title.empty()) args[1][0]["query"] = title;
+	args[2]["limit"] = 500;
+    if (xmlrpc.execute("SearchSubtitles", args, res) && res.isObject())
+	{
+		XmlRpcValue data = res["data"];
+
+		if (data.isArray())
+		{
+			for(int i = 0, len = data.size(); i < len; i++)
+			{
+				XmlRpcValue v = data[i];
+				
+				if (v.isObject())
+				{
+					XmlRpcValue MovieName = v["MovieName"];
+					XmlRpcValue IDSubtitleFile = v["IDSubtitleFile"];
+				
+					if (MovieName.canString() && IDSubtitleFile.canString())
+					{
+						dictionary item;
+					
+						XmlRpcValue MovieYear = v["MovieYear"];
+						if (MovieYear.canString()) item["year"] = MovieYear.asString();
+					
+						item["id"] = IDSubtitleFile.asString();
+						item["title"] = MovieName.asString();
+					
+						XmlRpcValue SubFileName = v["SubFileName"];
+						if (SubFileName.canString()) item["fileName"] = SubFileName.asString();
+					
+						XmlRpcValue SubFormat = v["SubFormat"];
+						if (SubFormat.isString()) item["format"] = SubFormat.asString();
+					
+						XmlRpcValue LanguageName = v["LanguageName"];
+						if (LanguageName.isString()) item["language"] = LanguageName.asString();
+					
+						XmlRpcValue ISO639 = v["ISO639"];
+						if (ISO639.isString()) item["lang"] = ISO639.asString();
+					
+						XmlRpcValue SubSumCD = v["SubSumCD"];
+						XmlRpcValue SubActualCD = v["SubActualCD"];
+						if (SubSumCD.canString() && SubActualCD.canString()) item["disc"] = SubActualCD.asString() + "/" + SubSumCD.asString();
+					
+						XmlRpcValue SubDownloadsCnt = v["SubDownloadsCnt"];
+						if (SubDownloadsCnt.canString()) item["downloadCount"] = SubDownloadsCnt.asString();
+					
+						XmlRpcValue SeriesSeason = v["SeriesSeason"];
+						if (SeriesSeason.canString()) item["seasonNumber"] = SeriesSeason.asString();
+					
+						XmlRpcValue SeriesEpisode = v["SeriesEpisode"];
+						if (SeriesEpisode.canString()) item["episodeNumber"] = SeriesEpisode.asString();
+					
+						XmlRpcValue SubtitlesLink = v["SubtitlesLink"];
+						if (SubtitlesLink.canString()) item["url"] = SubtitlesLink.asString();
+					
+						XmlRpcValue IDMovieImdb = v["IDMovieImdb"];
+						if (IDMovieImdb.canString()) item["imdb"] = IDMovieImdb.asString();
+					
+						XmlRpcValue SubBad = v["SubBad"];
+						if (SubBad.canString()) item["isBad"] = SubBad.asString();
+					
+						XmlRpcValue SubHearingImpaired = v["SubHearingImpaired"];
+						if (SubHearingImpaired.canString()) item["hearingImpaired"] = SubHearingImpaired.asString();
+						
+						ret.insertLast(item);
+						
+					}
+				}
+			}
+		}
+	}
+	
+	return ret;
+}
+
+string NewSubtitleDownload(string id)
+{
+	XmlRpcClient xmlrpc(RPC_URL);
+	XmlRpcValue args, res;
+
+	args[0] = Token;
+	args[1][0] = id;
+    if (xmlrpc.execute("DownloadSubtitles", args, res) && res.isObject())
+	{
+		XmlRpcValue data = res["data"];
+		
+		if (data.isArray())
+		{
+			XmlRpcValue sub = data[0];		
+			
+			if (sub.isObject())
+			{
+				XmlRpcValue bsse64 = sub["data"];
+				
+				if (bsse64.isString()) return HostBase64Dec(bsse64.asString());
+			}
+		}
+	}
+	return "";
+}
 
 string GetTitle()
 {
@@ -62,17 +295,45 @@ string GetVersion()
 
 string GetDesc()
 {
-	return "https://www.opensubtitles.com/";
+	return "https://api.opensubtitles.org";
 }
 
 string GetLanguages()
 {
-	string ret = "ab, af, am, an, ar, as, at, az, be, bg, bn, br, bs, ca, cy, cs, da, de, ea, el";
+	string ret = "";
+	XmlRpcClient xmlrpc(RPC_URL);
+	XmlRpcValue args, res;	
 	
-	ret += ", en, eo, es, et, eu, ex, fa, fi, fr, ga, gd, gl, he, hi, hr, hu, hy, ia, id, ig, is, it, ja";
-	ret += ", ka, kk, km, kn, ko, ku, lb, lt, lv, ma, me, mk, ml, mn, mr, ms, my, ne, nl, no, nv, oc, or";
-	ret += ", pb, pl, pm, pr, ps, pt, ro, ru, sd, se, si, sk, sl, so, sp, sq, sr, sv, sw, sx, sy, ta, te";
-	ret += ", th, tl, tr, tp, tt, uk, ur, uz, vi, ze, zh, zt";
+	args = "en";
+    if (xmlrpc.execute("GetSubLanguages", args, res) && res.isObject())
+	{
+		XmlRpcValue data = res["data"];
+		
+		if (data.isArray())
+		{
+			for(int i = 0, len = data.size(); i < len; i++)
+			{
+				XmlRpcValue lang = data[i];
+				
+				if (lang.isObject())
+				{
+					//XmlRpcValue SubLanguageID = lang["SubLanguageID"];
+					XmlRpcValue ISO639 = lang["ISO639"];
+					
+					if (ISO639.canString())
+					{
+						string iso = ISO639.asString();
+						
+						if (!iso.empty())
+						{
+							if (ret.empty()) ret = iso;
+							else ret = ret + "," + iso;
+						}
+					}
+				}
+			}
+		}
+	}
 	return ret;
 }
 
@@ -83,66 +344,70 @@ string GetLoginTitle()
 
 string GetLoginDesc()
 {
-	return "";
+	return "";;
 }
 
 string ServerCheck(string User, string Pass)
 {
-	string url = ApiHost + "languages";
-	string text = HostUrlGetString(url);
-	string ret = "fail";
-	JsonReader reader;
-	JsonValue root;
+//	new
+	string result = ServerLogin(User, Pass);
+	if (!result.empty() && !Token.empty()) return result;
 
-	if (reader.parse(text, root) && root.isObject())
+// old
+	string url = ISDB_URL + "test.php";
+	string text = HostUrlGetString(url);
+	string ret = "200 OK";
+	if (text != "ISDb v1")
 	{
-		ret = "ok";
+		int s = text.find("ISDb v");
+		
+		if (s == 0) ret = "Invalid version";
+		else ret = text;
 	}
 	return ret;
 }
 
 string ServerLogin(string User, string Pass)
 {
-	string headers = "Content-Type: application/json\r\n";
-	headers += "Api-Key: " + HostGetApiKey(ApiHost) + "\r\n";
-	headers += "Accept: application/json\r\n";
+	string ret = "";
+	XmlRpcClient xmlrpc(RPC_URL);
+	XmlRpcValue args, res;
 	
-	string post = "{ \"username\": \"" + User + "\", \"password\": \"" + Pass + "\" }";
-	
-	string data = HostUrlGetString(ApiHost + "api/v1/login", "", headers, post);
-	string ret = "fail";
-	JsonReader reader;
-	JsonValue root;
-	if (reader.parse(data, root) && root.isObject())
+	args[0] = User;
+	args[1] = Pass;
+	args[2] = "en";
+	args[3] = "VLsub 0.10.2";
+	if (xmlrpc.execute("LogIn", args, res) && res.isObject())
 	{
-		JsonValue token = root["token"];
-
-		if (token.isString())
+		XmlRpcValue token = res["token"];
+		XmlRpcValue status = res["status"];
+		
+		if (token.canString())
 		{
+			ServerLogout();
 			Token = token.asString();
-			ret = "ok";
 		}
+		if (status.canString()) return status.asString();
 	}
-	return ret;
+	return "cannot connect";
 }
 
 void ServerLogout()
 {
 	if (!Token.empty())
 	{
-		string headers = "Accept: application/json\r\n";
-		headers += "Api-Key: " + HostGetApiKey(ApiHost) + "\r\n";
-		headers += "Authorization: Bearer " + Token + "\r\n";
+		XmlRpcClient xmlrpc(RPC_URL);
+		XmlRpcValue args, res;
 		
-		HostUrlGetString(ApiHost + "api/v1/logout", "", headers);
-
+		args[0] = Token;
+		xmlrpc.execute("LogOut", args, res);
 		Token = "";
 	}
 }
 
 string SubtitleWebSearch(string MovieFileName, dictionary MovieMetaData)
 {
-	string url = "https://www.opensubtitles.org/isdb/index.php?";
+	string url = ISDB_URL + "index.php?";
 	int64 size = 0;
 	uint64 hash = GetHash(MovieFileName, size);
 	string title = string(MovieMetaData["title"]);
@@ -153,149 +418,210 @@ string SubtitleWebSearch(string MovieFileName, dictionary MovieMetaData)
 
 array<dictionary> SubtitleSearch(string MovieFileName, dictionary MovieMetaData)
 {
-	int64 size = 0;
-	uint64 hash = GetHash(MovieFileName, size);
-	string fileName = string(MovieMetaData["fileName"]);
-	string fileExtension = string(MovieMetaData["fileExtension"]);
-	string title = string(MovieMetaData["title"]);
-
-	string url = "api/v1/subtitles";
-	string sep = "?";
-	if (hash != 0)
-	{
-		url += sep;
-		url += "moviehash=" + formatUInt(hash, "0h", 16);
-		sep = "&";
-	}
-	string query;
-	if (!fileName.empty()) query = fileName + "." + fileExtension;
-	else if (!title.empty()) query = title;	
-	if (!query.empty()) url += sep + "query=" + HostUrlEncode(query);
-
-	string headers = "Api-Key: " + HostGetApiKey(ApiHost) + "\r\n";
-	
-	string result = HostUrlGetString(ApiHost + url, "", headers);
-	
-	array<dictionary> ret;
-	if (!result.empty())
-	{
-		JsonReader reader;
-		JsonValue root;
-		if (reader.parse(result, root) && root.isObject())
-		{
-			JsonValue data = root["data"];
-
-			if (data.isArray())
-			{
-				for(int i = 0, len = data.size(); i < len; i++)
-				{
-					JsonValue it = data[i];
-			
-					if (it.isObject())
-					{
-						JsonValue attributes = it["attributes"];
-
-						if (attributes.isObject())
-						{
-							JsonValue files = attributes["files"];
-
-							if (files.isArray())
-							{
-								JsonValue files0 = files[0];
-
-								if (files0.isObject())
-								{
-									JsonValue file_id = files0["file_id"];
-
-									if (file_id.isInt())
-									{
-										dictionary item;
-										
-										item["id"] = file_id.asString();
-
-										item["title"] = title;
-
-										item["format"] = "srt";
-
-										JsonValue nb_cd = attributes["nb_cd"];
-										JsonValue cd_number = files0["cd_number"];
-										if (nb_cd.isInt() && cd_number.isInt())
-										{
-											item["disc"] = cd_number.asString() + "/" + nb_cd.asString();
-										}
-
-										JsonValue download_count = attributes["download_count"];
-										if (download_count.isInt()) item["downloadCount"] = download_count.asString();
-
-										JsonValue language = attributes["language"];
-										if (language.isString()) item["lang"] = language.asString();
-
-										JsonValue hearing_impaired = attributes["hearing_impaired"];
-										if (hearing_impaired.isBool() && hearing_impaired.asBool()) item["hearingImpaired"] = "true";
-
-										JsonValue file_name = files0["file_name"];
-										if (file_name.isString()) item["fileName"] = file_name.asString();
-
-										JsonValue feature_details = attributes["feature_details"];
-										if (feature_details.isObject())
-										{
-											JsonValue year = feature_details["year"];
-											if (year.isInt()) item["year"] = year.asString();
-
-											JsonValue season_number = feature_details["season_number"];
-											if (season_number.isInt()) item["seasonNumber"] = season_number.asString();
-
-											JsonValue episode_number = feature_details["episode_number"];
-											if (episode_number.isInt()) item["episodeNumber"] = episode_number.asString();
-
-											JsonValue imdb_id = feature_details["imdb_id"];
-											if (imdb_id.isInt()) item["imdb"] = imdb_id.asString();
-										}
-
-										JsonValue moviehash_match = attributes["moviehash_match"];
-										if (moviehash_match.isBool() && moviehash_match.asBool()) item["exactMatch"] = "true";
-
-										JsonValue url = attributes["url"];
-										if (url.isString()) item["url"] = url.asString();
-
-										ret.insertLast(item);
-									}
-								}
-							}
-						}
-					}
-				}
-			}
-		}
-	}
-
-	return ret;
+	if (Token.empty()) return OldSubtitleSearch(MovieFileName, MovieMetaData);
+	return NewSubtitleSearch(MovieFileName, MovieMetaData);
 }
 
 string SubtitleDownload(string id)
 {
-	string headers = "Content-Type: application/json\r\n";
-	headers += "Api-Key: " + HostGetApiKey(ApiHost) + "\r\n";
-	headers += "Accept: application/json\r\n";
-	if (!Token.empty()) headers += "Authorization: Bearer " + Token + "\r\n";
-	string post = "{ \"file_id\": " + id + " }";
-	string result = HostUrlGetString(ApiHost + "api/v1/download", "", headers, post);
-
-	if (!result.empty())
-	{
-		JsonReader reader;
-		JsonValue root;
-		if (reader.parse(result, root) && root.isObject())
-		{
-			JsonValue link = root["link"];
-
-			if (link.isString()) return HostUrlGetString(link.asString());
-		}
-	}
-	return "";
+	if (Token.empty()) return OldSubtitleDownload(id);
+	return NewSubtitleDownload(id);
 }
 
 string GetUploadFormat()
 {
 	return "srt";
 }
+
+
+string SubtitleUpload(string MovieFileName, dictionary MovieMetaData, string SubtitleName, string SubtitleContent)
+{
+	if (!Token.empty())
+	{
+		int64 size = 0;
+		uint64 hash = GetHash(MovieFileName, size);
+		string MovieName = string(MovieMetaData["title"]);
+		XmlRpcClient xmlrpc(RPC_URL);
+		XmlRpcValue args, result;
+		string hashStr = formatUInt(hash, "0h", 16);
+		
+		args[0] = Token;
+		args[1]["cd1"]["moviehash"] = hashStr;
+		args[1]["cd1"]["moviebytesize"] = formatUInt(size);
+		args[1]["cd1"]["subhash"] = HostHashMD5(SubtitleContent);
+		args[1]["cd1"]["subfilename"] = SubtitleName;
+		args[1]["cd1"]["moviefilename"] = MovieName;	
+		if (xmlrpc.execute("TryUploadSubtitles", args, result) && result.isObject())
+		{
+			XmlRpcValue alreadyindb = result["alreadyindb"];
+			
+			if (alreadyindb.isBool() && alreadyindb.asBool()) return "already exist";
+			else if (alreadyindb.isInt() && alreadyindb.asInt() != 0) return "already exist";
+			else
+			{
+				string imdb = "";
+				XmlRpcValue data = result["data"];
+				
+				if (data.isArray())
+				{
+					XmlRpcValue data0 = data[0];
+					
+					if (data0.isObject())
+					{
+						XmlRpcValue IDMovieImdb = data0["IDMovieImdb"];
+						
+						if (IDMovieImdb.canString()) imdb = IDMovieImdb.asString();
+					}
+				}
+				
+				if (imdb.empty()) // get imdb by CheckMovieHash
+				{
+					XmlRpcValue _args, _result;
+					
+					_args[0] = Token;
+					_args[1][0] = hashStr;
+					if (xmlrpc.execute("CheckMovieHash", _args, _result) && _result.isObject())
+					{
+						XmlRpcValue data2 = _result["data"];
+						
+						if (data2.isObject())
+						{
+							XmlRpcValue moviehash = data2[hashStr];
+							
+							if (moviehash.isObject())
+							{							
+								XmlRpcValue ServerName = moviehash["MovieName"];
+								
+								if (ServerName.isString())
+								{
+									if (HostCompareMovieName(MovieName, ServerName.asString()))
+									{
+										XmlRpcValue IDMovieImdb = moviehash["IDMovieImdb"];
+										
+										if (IDMovieImdb.canString()) imdb = IDMovieImdb.asString();
+									}
+								}
+							}
+						}
+					}
+				}
+
+				if (imdb.empty()) // get imdb by CheckMovieHash2
+				{
+					XmlRpcValue _args, _result;
+					
+					_args[0] = Token;
+					_args[1][0] = hashStr;
+					if (xmlrpc.execute("CheckMovieHash2", _args, _result) && _result.isObject())
+					{
+						XmlRpcValue data2 = _result["data"];
+						
+						if (data2.isObject())
+						{
+							XmlRpcValue moviehash = data2[hashStr];
+							
+							if (moviehash.isArray())
+							{
+								for(int i = 0, len = moviehash.size(); i < len; i++)
+								{
+									XmlRpcValue v = moviehash[i];
+									
+									if (v.isObject())
+									{
+										XmlRpcValue ServerName = v["MovieName"];
+										
+										if (ServerName.isString())
+										{
+											if (HostCompareMovieName(MovieName, ServerName.asString()))
+											{
+												XmlRpcValue IDMovieImdb = moviehash["IDMovieImdb"];
+												
+												if (IDMovieImdb.canString())
+												{
+													imdb = IDMovieImdb.asString();
+													break;
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+
+				if (imdb.empty()) // get imdb by SearchMoviesOnIMDB
+				{
+					XmlRpcValue _args, _result;
+
+					_args[0] = Token;
+					_args[1] = MovieName;
+					if (xmlrpc.execute("SearchMoviesOnIMDB", _args, _result) && _result.isObject())
+					{
+						XmlRpcValue data2 = _result["data"];
+						
+						if (data2.isArray())
+						{
+							for(int i = 0, len = data2.size(); i < len; i++)
+							{
+								XmlRpcValue v = data2[i];
+								
+								if (v.isObject())
+								{						
+									XmlRpcValue title = v["title"];
+									
+									if (title.isString())
+									{
+										if (HostCompareMovieName(MovieName, title.asString()))
+										{
+											XmlRpcValue id = v["id"];
+											
+											if (id.canString())
+											{
+												imdb = id.asString();
+												break;
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+				
+				if (!imdb.empty()) // if imdb is exist
+				{
+					XmlRpcValue _args, _result;
+				
+					_args[0] = Token;
+					_args[1][0]["moviehash"] = hashStr;
+					_args[1][0]["moviebytesize"] = size;
+					_args[1][0]["imdbid"] = imdb;
+					_args[1][0]["subfilename"] = SubtitleName;
+					_args[1][0]["moviefilename"] = MovieName;
+					if (xmlrpc.execute("InsertMovieHash", _args, _result) && _result.isObject())
+					{
+						string gzip = HostBase64Enc(HostGzipCompress(SubtitleContent));
+						
+						args[1]["cd1"]["subcontent"] = gzip;
+						args[1]["baseinfo"]["idmovieimdb"] = imdb;
+						if (xmlrpc.execute("UploadSubtitles", args, result) && result.isObject())
+						{
+							XmlRpcValue status = result["status"];
+
+							if (status.isString()) return status.asString();
+							return "upload subtitle fail";
+						}
+						return "upload subtitle error";
+					}
+					return "insert movie hash error";
+				}
+				return "cannot find imdb";
+			}
+			// return "try upload fail";
+		}
+		return "try upload error";
+	}
+	return "not login";
+}
+
