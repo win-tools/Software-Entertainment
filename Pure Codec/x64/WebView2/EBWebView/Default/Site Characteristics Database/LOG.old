@@ -1,5 +1,0 @@
-2026/09/22-21:44:02.133 196c Log #6: 0 ops saved to Table #7 OK
-2026/09/22-21:44:02.134 196c Archiving D:\application\WTools\Entertainment\Pure Codec\x64\WebView2\EBWebView\Default\Site Characteristics Database/000006.log: OK
-2026/09/22-21:44:02.135 196c Table #4: 1 entries OK
-2026/09/22-21:44:02.145 196c Archiving D:\application\WTools\Entertainment\Pure Codec\x64\WebView2\EBWebView\Default\Site Characteristics Database/MANIFEST-000001: OK
-2026/09/22-21:44:02.325 196c **** Repaired leveldb D:\application\WTools\Entertainment\Pure Codec\x64\WebView2\EBWebView\Default\Site Characteristics Database; recovered 1 files; 130 bytes. Some data may have been lost. ****
